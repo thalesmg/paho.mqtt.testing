@@ -403,6 +403,7 @@ class Test(unittest.TestCase):
       # Unsubscribe from one topic
       bclient.unsubscribe([topics[0]])
       callback2.clear() # if there were any retained messsages
+      time.sleep(2) # wait for unsubscribe to complete
 
       aclient.connect(host=host, port=port, cleanstart=True)
       aclient.publish(topics[0], b"topic 0 - unsubscribed", 1, retained=False)
