@@ -484,6 +484,7 @@ class Test(unittest.TestCase):
       callback.clear()
       aclient.connect(host=aclientHost, port=port, cleanstart=True)
       aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+      time.sleep(3)
       publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
       publish_properties.UserProperty = ("a", "2")
       publish_properties.UserProperty = ("c", "3")
