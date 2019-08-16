@@ -72,7 +72,7 @@ def cleanRetained():
   curclient.subscribe(["#"], [MQTTV5.SubscribeOptions(0)])
   time.sleep(2) # wait for all retained messages to arrive
   for message in callback.messages:
-    logging.info("deleting retained message for topic", message[0])
+    logging.info("deleting retained message for topic %s", message[0])
     curclient.publish(message[0], b"", 0, retained=True)
   curclient.disconnect()
   time.sleep(.1)
@@ -148,10 +148,6 @@ class Test(unittest.TestCase):
 
     def test_retained_message(self):
       print("test_retained_message")
-      qos0topic="fromb/qos 0"
-      qos1topic="fromb/qos 1"
-      qos2topic="fromb/qos2"
-      wildcardtopic="fromb/+"
 
       publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
       publish_properties.UserProperty = ("a", "2")
@@ -160,23 +156,89 @@ class Test(unittest.TestCase):
       # retained messages
       callback.clear()
       aclient.connect(host=aclientHost, port=port, cleanstart=True)
-      aclient.publish(topics[1], b"qos 0", 0, retained=True, properties=publish_properties)
-      aclient.publish(topics[2], b"qos 1", 1, retained=True, properties=publish_properties)
-      aclient.publish(topics[3], b"qos 2", 2, retained=True, properties=publish_properties)
+      # send a retained message
+      aclient.publish(topics[1], b"qos 0 retained", 0, retained=True, properties=publish_properties)
+      aclient.publish(topics[2], b"qos 1 retained", 1, retained=True, properties=publish_properties)
+      aclient.publish(topics[3], b"qos 2 retained", 2, retained=True, properties=publish_properties)
+      # send a unretained message
+      aclient.publish(topics[1], b"qos 0 not retained", 0, retained=False, properties=publish_properties)
+      aclient.publish(topics[2], b"qos 1 not retained", 1, retained=False, properties=publish_properties)
+      aclient.publish(topics[3], b"qos 2 not retained", 2, retained=False, properties=publish_properties)
+      # send a new retained messag
+      aclient.publish(topics[1], b"new qos 0 retained", 0, retained=True, properties=publish_properties)
+      aclient.publish(topics[2], b"new qos 1 retained", 1, retained=True, properties=publish_properties)
+      aclient.publish(topics[3], b"new qos 2 retained", 2, retained=True, properties=publish_properties)
       time.sleep(1)
       aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
       time.sleep(1)
       aclient.disconnect()
+      # [MQTT-3.3.1-5] [MQTT-3.3.1-8]
+      self.assertEqual(len(callback.messages), 3) 
+      self.assertEqual(callback.messages[0][1], b'new qos 0 retained')
+      self.assertEqual(callback.messages[1][1], b'new qos 1 retained')
+      self.assertEqual(callback.messages[2][1], b'new qos 2 retained')
 
-      self.assertEqual(len(callback.messages), 3)
       userprops = callback.messages[0][5].UserProperty
-      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      self.assertTrue(userprops in [[("c", "3"), ("a", "2")]], userprops) # [MQTT-3.3.2-17] [MQTT-3.3.2-18]
       userprops = callback.messages[1][5].UserProperty
-      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      self.assertTrue(userprops in [[("c", "3"), ("a", "2")]], userprops) # [MQTT-3.3.2-17] [MQTT-3.3.2-18]
       userprops = callback.messages[2][5].UserProperty
-      self.assertTrue(userprops in [[("a", "2"), ("c", "3")],[("c", "3"), ("a", "2")]], userprops)
+      self.assertTrue(userprops in [[("c", "3"), ("a", "2")]], userprops) # [MQTT-3.3.2-17] [MQTT-3.3.2-18]
       qoss = [callback.messages[i][2] for i in range(3)]
       self.assertTrue(1 in qoss and 2 in qoss and 0 in qoss, qoss)
+
+      callback.clear()
+      aclient.connect(host=aclientHost, port=port, cleanstart=True)
+      aclient.publish(topics[1], b"", 0, retained=True)
+      aclient.publish(topics[2], b"", 1, retained=True)
+      aclient.publish(topics[3], b"", 2, retained=True)
+      time.sleep(1)
+      aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
+      time.sleep(1)
+      aclient.disconnect()
+      self.assertEqual(len(callback.messages), 0) # [MQTT-3.3.1-6] 
+
+      bclient.connect(host=bclientHost, port=port, cleanstart=True)
+      bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
+      bclient.disconnect()
+      self.assertEqual(len(callback2.messages), 0) # [MQTT-3.3.1-7]
+
+      # Retain Handling Subscription Option
+      # Retain As Published
+      aclient.connect(host=aclientHost, port=port, cleanstart=True)
+      aclient.publish(topics[1], b"qos 0 retained", 0, retained=True)
+      aclient.publish(topics[2], b"qos 1 retained", 1, retained=True)
+      aclient.publish(topics[3], b"qos 2 retained", 2, retained=True)
+      time.sleep(1)
+      aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
+      # [MQTT-3.3.1-9] [MQTT-3.3.1-12]
+      callback2.clear()
+      bclient.connect(host=bclientHost, port=port, cleanstart=True)
+      bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2,False,False,0)])
+      time.sleep(.1)
+      bclient.disconnect()
+      self.assertEqual(len(callback2.messages), 3)
+      self.assertFalse(callback2.messages[0][3])
+      self.assertFalse(callback2.messages[1][3])
+      self.assertFalse(callback2.messages[2][3])
+      # [MQTT-3.3.1-10] [MQTT-3.3.1-13]
+      callback2.clear()
+      bclient.connect(host=bclientHost, port=port, cleanstart=True)
+      bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2,False,True,1)])
+      time.sleep(.1)
+      bclient.disconnect()
+      self.assertEqual(len(callback2.messages), 0)
+      self.assertTrue(callback2.messages[0][3])
+      self.assertTrue(callback2.messages[1][3])
+      self.assertTrue(callback2.messages[2][3])
+      # [MQTT-3.3.1-11]
+      callback2.clear()
+      bclient.connect(host=bclientHost, port=port, cleanstart=True)
+      bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2,False,False,2)])
+      time.sleep(.1)
+      bclient.disconnect()
+      self.assertEqual(len(callback2.messages), 0)
+      aclient.disconnect()
 
       cleanRetained()
 
