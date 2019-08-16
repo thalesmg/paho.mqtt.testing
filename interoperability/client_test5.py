@@ -131,25 +131,21 @@ class Test(unittest.TestCase):
       rc = aclient.connect(host=aclientHost, port=port)
       self.assertEqual(rc.reasonCode.getName(), "Success")
       aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-      # zhouzb: add time.sleep(2) x 3
-      time.sleep(2)
       aclient.publish(topics[0], b"qos 0")
-      time.sleep(2)
       aclient.publish(topics[0], b"qos 1", 1)
-      time.sleep(2)
       aclient.publish(topics[0], b"qos 2", 2)
-      time.sleep(2)
+      time.sleep(1) # wait for publish to finish
       aclient.disconnect()
       print(callback.messages)
       self.assertEqual(len(callback.messages), 3)
 
       with self.assertRaises(Exception):
         aclient.connect(host=aclientHost, port=port)
-        aclient.connect(host=aclientHost, port=port, newsocket=False) # should fail - second connect on socket
+        aclient.connect(host=aclientHost, port=port, newsocket=False) # should fail - second connect on socket [MQTT-3.1.0-2]
 
       with self.assertRaises(Exception):
-        aclient.connect(host=aclientHost, port=port, protocolName="hj") # should fail - wrong protocol name
-    
+        aclient.connect(host=aclientHost, port=port, protocolName="hj") # should fail - wrong protocol name [MQTT-3.1.2-1]
+
     def test_retained_message(self):
       print("test_retained_message")
       qos0topic="fromb/qos 0"
