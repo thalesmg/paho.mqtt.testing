@@ -227,6 +227,10 @@ class Client:
         time.sleep(0.1)
       self.__receiver.stopping = False
 
+  def pingreq(self):
+    pingreq = MQTTV5.Pingreqs()
+    return pingreq.json()
+
   def terminate(self):
     if self.__receiver:
       self.__receiver.stopping = True
