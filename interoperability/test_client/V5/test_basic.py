@@ -34,17 +34,17 @@ class Callbacks(mqtt_client.Callback):
         "qos" : qos, "retained" : retained, "msgid" : msgid, "properties" : properties})
     return True
 
-  def published(self, msgid):
+  def published(self, msgid, reasonCode=None, properties=None):
     logging.info("published %d", msgid)
-    self.publisheds.append(msgid)
+    self.publisheds.append((msgid, reasonCode, properties))
 
-  def subscribed(self, msgid, data):
+  def subscribed(self, msgid, reasonCodes, properties):
     logging.info("subscribed %d", msgid)
-    self.subscribeds.append((msgid, data))
+    self.subscribeds.append((msgid, reasonCodes, properties))
 
-  def unsubscribed(self, msgid):
+  def unsubscribed(self, msgid, reasonCodes, properties):
     logging.info("unsubscribed %d", msgid)
-    self.unsubscribeds.append(msgid)
+    self.unsubscribeds.append((msgid, reasonCodes, properties))
 
 callback = Callbacks()
 callback2 = Callbacks()
@@ -56,6 +56,7 @@ bclient.registerCallback(callback2)
 topic_prefix = "client_test5/"
 topics = [topic_prefix+topic for topic in ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA"]]
 wildtopics = [topic_prefix+topic for topic in ["TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#"]]
+denytopics = [topic_prefix+topic for topic in ["TopicD"]]
 nosubscribe_topics = ("test/nosubscribe",)
 host = "localhost"
 port = 1883

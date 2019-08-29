@@ -1,6 +1,18 @@
 from .test_basic import * 
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
+# @pytest.mark.xfail(strict=True, reason='unconfirmed'
+def test_subscribe():
+  # [MQTT-3.8.3-1]
+  with pytest.raises(Exception):
+    aclient.connect(host=host, port=port, cleanstart=True)
+    aclient.subscribe(["订阅主题".encode("gbk")], [MQTTV5.SubscribeOptions(2)])
+  
+  # [MQTT-3.8.3-2]
+  with pytest.raises(Exception):
+    aclient.connect(host=host, port=port, cleanstart=True)
+    aclient.subscribe([], [MQTTV5.SubscribeOptions(2)])
+  
 def test_subscribe_options():
   # [MQTT-3.8.3-3]
   # noLocal
@@ -69,40 +81,64 @@ def test_subscribe_options():
 
   cleanRetained()
 
-def test_subscribe_identifiers():
-  callback.clear()
-  callback2.clear()
-
+def test_subscribe_actions():
+  # [MQTT-3.8.4-1] [MQTT-3.8.4-2]
   aclient.connect(host=host, port=port, cleanstart=True)
-  sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
-  sub_properties.SubscriptionIdentifier = 456789
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
+  packet_id = aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.subscribeds, 1, 3)
-
-  bclient.connect(host=host, port=port, cleanstart=True)
-  sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
-  sub_properties.SubscriptionIdentifier = 2
-  bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
-
-  sub_properties.clear()
-  sub_properties.SubscriptionIdentifier = 3
-  bclient.subscribe([topics[0]+"/#"], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
-
-  waitfor(callback2.subscribeds, 1, 3)
-  bclient.publish(topics[0], b"sub identifier test", 1, retained=False)
-
-  waitfor(callback.messages, 1, 3)
-  assert len(callback.messages) == 1
-  assert callback.messages[0][5].SubscriptionIdentifier[0] == 456789
   aclient.disconnect()
+  assert callback.subscribeds[0][0] == packet_id
 
-  waitfor(callback2.messages, 2, 5)
-  assert len(callback2.messages) == 2
-  expected_subsids = set([2, 3])
-  received_subsids = set([callback2.messages[0][5].SubscriptionIdentifier[0], 
-                          callback2.messages[1][5].SubscriptionIdentifier[0]])
-  assert received_subsids == expected_subsids
-  bclient.disconnect()
+  # [MQTT-3.8.4-3] [MQTT-3.8.4-4]
+  callback.clear()
+  aclient.connect(host=host, port=port, cleanstart=True)
+  aclient.publish(topics[0], b"test_subscribe_actions", 2, retained=True)
+  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=1, retainAsPublished=0, retainHandling=0)])
+  waitfor(callback.subscribeds, 1, 3)
+  assert len(callback.messages) == 1
+  assert callback.messages[0][0] == topics[0]
+  assert callback.messages[0][1] == b'test_subscribe_actions'
+  assert callback.messages[0][2] == 1
+  assert callback.messages[0][3] == False
+  callback.clear()
+  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=2, retainAsPublished=1, retainHandling=0)])
+  waitfor(callback.subscribeds, 1, 3)
+  assert len(callback.messages) == 1
+  assert callback.messages[0][0] == topics[0]
+  assert callback.messages[0][1] == b'test_subscribe_actions'
+  assert callback.messages[0][2] == 2
+  assert callback.messages[0][3] == True
+  callback.clear()
+  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=2, retainHandling=2)])
+  waitfor(callback.subscribeds, 1, 3)
+  assert len(callback.messages) == 0
+  aclient.disconnect()
+  cleanRetained()
+
+  # [MQTT-3.8.4-5]
+  callback.clear()
+  aclient.connect(host=host, port=port, cleanstart=True)
+  aclient.subscribe([topics[0],topics[1],topics[2]], [MQTTV5.SubscribeOptions(2),MQTTV5.SubscribeOptions(2),MQTTV5.SubscribeOptions(2)])
+  waitfor(callback.subscribeds, 1, 3)
+  aclient.unsubscribe([topics[0],topics[1],topics[2]])
+  aclient.disconnect()
+  assert len(callback.subscribeds) == 1 
+
+  # [MQTT-3.8.4-6] [MQTT-3.8.4-7] [MQTT-3.8.4-8]
+  callback.clear()
+  aclient.connect(host=host, port=port, cleanstart=True)
+  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(0)])
+  waitfor(callback.subscribeds, 1, 3)
+  assert callback.subscribeds[0][1][0].value == 0
+  callback.clear()
+  aclient.subscribe([topics[1]], [MQTTV5.SubscribeOptions(1)])
+  waitfor(callback.subscribeds, 1, 3)
+  assert callback.subscribeds[0][1][0].value == 1
+  callback.clear()
+  aclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
+  waitfor(callback.subscribeds, 1, 3)
+  assert callback.subscribeds[0][1][0].value == 2
+  
 
 def test_shared_subscriptions():
   shared_sub_topic = '$share/sharename/' + topic_prefix + 'x'

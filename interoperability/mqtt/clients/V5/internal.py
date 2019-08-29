@@ -55,9 +55,11 @@ class Receivers:
       return
     logger.debug("in :%s", str(packet))
 
+    # print(packet.Names[packet.fh.PacketType])
+
     if packet.fh.PacketType == MQTTV5.PacketTypes.SUBACK:
       if hasattr(callback, "subscribed"):
-        callback.subscribed(packet.packetIdentifier, packet.reasonCodes)
+        callback.subscribed(packet.packetIdentifier, packet.reasonCodes, packet.properties)
 
     elif packet.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT:
       if hasattr(callback, "disconnected"):
@@ -65,7 +67,7 @@ class Receivers:
 
     elif packet.fh.PacketType == MQTTV5.PacketTypes.UNSUBACK:
       if hasattr(callback, "unsubscribed"):
-        callback.unsubscribed(packet.packetIdentifier)
+        callback.unsubscribed(packet.packetIdentifier, packet.reasonCodes, packet.properties)
 
     elif packet.fh.PacketType == MQTTV5.PacketTypes.PUBACK:
       "check if we are expecting a puback"
@@ -73,7 +75,10 @@ class Receivers:
         self.outMsgs[packet.packetIdentifier].fh.QoS == 1:
         del self.outMsgs[packet.packetIdentifier]
         if hasattr(callback, "published"):
-          callback.published(packet.packetIdentifier)
+          if hasattr(packet, "reasonCode") and hasattr(packet, "properties"):
+            callback.published(packet.packetIdentifier, packet.reasonCode, packet.properties)
+          else:
+            callback.published(packet.packetIdentifier)
       else:
         raise Exception("No QoS 1 with that message id sent")
 

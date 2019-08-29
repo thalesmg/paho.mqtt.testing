@@ -4,7 +4,7 @@ import mqtt.formats.MQTTV5 as MQTTV5
 from .test_basic import *
 from .test_basic import Callbacks
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def clean():
   cleanup()
 

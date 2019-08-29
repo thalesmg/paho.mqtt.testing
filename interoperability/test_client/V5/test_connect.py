@@ -9,13 +9,14 @@ def test_basic():
   rc = aclient.connect(host=host, port=port)
   assert rc.reasonCode.getName() == "Success"
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-  time.sleep(2)
+  waitfor(callback.subscribeds, 1, 3)
   aclient.publish(topics[0], b"qos 0")
   aclient.publish(topics[0], b"qos 1", 1)
   aclient.publish(topics[0], b"qos 2", 2)
-  time.sleep(2) # wait for publish to finish
-  aclient.disconnect()
+  # waitfor(callback.publisheds, 2, 3)
+  waitfor(callback.messages, 3, 3)
   assert len(callback.messages) == 3
+  aclient.disconnect()
 
   with pytest.raises(Exception):
     aclient.connect(host=host, port=port)
@@ -26,15 +27,17 @@ def test_protocol():
   with pytest.raises(Exception):
     aclient.connect(host=host, port=port, protocolName="hj")
 
-  # MQTT-3.1.2-2]
+  # [MQTT-3.1.2-2]
   with pytest.raises(Exception):
     connect = MQTTV5.Connects()
     connect.ClientIdentifier = "testProtocol"
     connect.CleanStart = True
     connect.KeepAliveTimer = 0
-    connect.protocolName = "MQTT"
+    connect.ProtocolName = "MQTT"
     connect.ProtocolVersion = 6
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(.5)
+    sock.connect((host, port))
     mqtt_client.main.sendtosocket(sock, connect.pack())
     MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
 
@@ -98,6 +101,7 @@ def test_will_message():
   assert len(callback2.messages) == 0
   cleanup()
  
+def test_will_qos():
   # [MQTT-3.1.2-11]
   with pytest.raises(Exception):
     connect = MQTTV5.Connects()
@@ -110,10 +114,15 @@ def test_will_message():
     connect.WillQoS = 2
     connect.WillRETAIN = 0
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(.5)
+    sock.connect((host, port))
     mqtt_client.main.sendtosocket(sock, connect.pack())
     MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
 
   # [MQTT-3.1.2-12]
+  will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
+  will_properties.WillDelayInterval = 0 # this is the default anyway
+
   aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
     willTopic=topics[2], willMessage=b"will message", willQoS=0,keepalive=2,
     willProperties=will_properties)
@@ -127,6 +136,9 @@ def test_will_message():
     willProperties=will_properties)
   aclient.disconnect
 
+  cleanup()
+
+def test_will_retain():
   # [MQTT-3.1.2-13]
   with pytest.raises(Exception):
     connect = MQTTV5.Connects()
@@ -139,10 +151,14 @@ def test_will_message():
     connect.WillQoS = 0
     connect.WillRETAIN = 1
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(.5)
+    sock.connect((host, port))
     mqtt_client.main.sendtosocket(sock, connect.pack())
     MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
 
   # [MQTT-3.1.2-14]
+  will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
+  will_properties.WillDelayInterval = 0 # this is the default anyway
   callback.clear()
   callback2.clear()
   aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
@@ -238,12 +254,13 @@ def test_keepalive():
   # keepalive processing.  We should be kicked off by the server if we don't send or receive any data, and don't send any pings either.
   keepalive = 1
   
-  bclient.connect(host=host, port=port, cleanstart=True, keepalive=0)
+  bclient.connect(host=host, port=port, cleanstart=True, keepalive=3)
   bclient.subscribe([topics[4]], [MQTTV5.SubscribeOptions(2)])
   
   connack = aclient.connect(host=host, port=port, cleanstart=True, keepalive=keepalive, willFlag=True,
-        willTopic=topics[4], willMessage=b"keepalive expiry")
+        willTopic=topics[4], willQoS=1, willMessage=b"keepalive expiry")
 
+  assert connack.reasonCode.getName() == "Success" and connack.sessionPresent == False
   # [MQTT-3.1.2-21]
   if hasattr(connack.properties, "ServerKeepAlive"):
     keepalive = connack.properties.ServerKeepAlive
@@ -322,15 +339,17 @@ def test_maximum_packet_size():
   waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 1
 
+  callback.clear()
   # send a packet too big to receive
   payload = b"."*(int(maximumPacketSize*2))
   aclient.publish(topics[0], payload, 1)
   waitfor(callback.messages, 2, 3)
-  assert len(callback.messages) == 1
+  assert len(callback.messages) == 0
 
   aclient.disconnect()
 
 def test_payload_order():
+  # [MQTT-3.1.3-1]
   with pytest.raises(Exception):
     connect = MQTTV5.Connects()
     connect.ClientIdentifier = "testPayloadOrder"
@@ -353,6 +372,7 @@ def test_payload_order():
     mqtt_client.main.sendtosocket(sock, connect.pack())
     MQTTV5.unpackPacket(MQTTV5.getPacket(sock))  
 
+# @pytest.mark.xfail(strict=True, reason='unconfirmed'
 def test_clientid():
   # [MQTT-3.1.3-2]
   client = mqtt_client.Client("myclientid".encode("utf-8"))
@@ -369,7 +389,7 @@ def test_clientid():
   
   # [MQTT-3.1.3-4]
   with pytest.raises(Exception):
-    client = mqtt_client.Client("0x97、0x61、0x6C、0x6F")
+    client = mqtt_client.Client("客户端".encode('gbk'))
     client.connect(host=host, port=port)
 
   # [MQTT-3.1.3-5]
@@ -472,13 +492,14 @@ def test_will_topic():
     connect.CleanStart = True
     connect.KeepAliveTimer = 0
     connect.WillFlag = True
-    connect.WillTopic = "0x97、0x61、0x6C、0x6F"       # UTF-8
+    connect.WillTopic = "遗嘱主题".encode("gbk")       # UTF-8
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(.5)
     sock.connect((host, port))
     mqtt_client.main.sendtosocket(sock, connect.pack())
     MQTTV5.unpackPacket(MQTTV5.getPacket(sock))  
 
+# @pytest.mark.xfail(strict=True, reason='unconfirmed'
 def test_username():
   # [MQTT-3.1.3-12]
   with pytest.raises(Exception):
@@ -487,11 +508,21 @@ def test_username():
     connect.CleanStart = True
     connect.KeepAliveTimer = 0
     connect.usernameFlag = True
-    connect.username = "0x97、0x61、0x6C、0x6F"         # UTF-8
+    connect.username = "用户名".encode("gbk")
+
+    connectFlags = bytes([(connect.CleanStart << 1) | (connect.WillFlag << 2) | \
+                       (connect.WillQoS << 3) | (connect.WillRETAIN << 5) | \
+                       (connect.usernameFlag << 6) | (connect.passwordFlag << 7)])
+    buffer = MQTTV5.writeUTF(connect.ProtocolName) + bytes([connect.ProtocolVersion]) + \
+              connectFlags + MQTTV5.writeInt16(connect.KeepAliveTimer)
+    buffer += connect.properties.pack()
+    buffer += MQTTV5.writeUTF(connect.ClientIdentifier)
+    buffer += bytes(connect.username)
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(.5)
     sock.connect((host, port))
-    mqtt_client.main.sendtosocket(sock, connect.pack())
+    mqtt_client.main.sendtosocket(sock, buffer)
     MQTTV5.unpackPacket(MQTTV5.getPacket(sock))  
 
 def test_connect_actions():
@@ -508,7 +539,7 @@ def test_connect_actions():
 
   new_client = mqtt_client.Client("myclientid".encode("utf-8"))
   connack = new_client.connect(host=host, port=port, cleanstart=True)
-  assert connack.sessionPresent == True # [MQTT-3.1.4-4]  [MQTT-3.1.4-5]
+  assert connack.reasonCode.getName() == "Success" and connack.sessionPresent == False# [MQTT-3.1.4-4]  [MQTT-3.1.4-5]
   waitfor(callback.disconnects, 1, 3)
   waitfor(callback2.messages, 1, 3)
   assert len(callback.disconnects) == 1

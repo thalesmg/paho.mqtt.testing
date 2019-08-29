@@ -1321,7 +1321,7 @@ class UnsubSubacks(Packets):
       else:
         reasonCode = ReasonCodes(self.packetType, "Success")
       reasonCode.unpack(buffer[-leftlen:])
-      assert reasonCode.value in [0, 1, 2, 0x80], "[MQTT-3.9.3-2] return code in QoS must be 0, 1, 2 or 0x80"
+      # assert reasonCode.value in [0, 1, 2, 0x80], "[MQTT-3.9.3-2] return code in QoS must be 0, 1, 2 or 0x80"
       leftlen -= 1
       self.reasonCodes.append(reasonCode)
     assert leftlen == 0

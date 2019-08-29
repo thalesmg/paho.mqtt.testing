@@ -172,8 +172,10 @@ class Client:
     return subscribe.packetIdentifier
 
 
-  def unsubscribe(self, topics):
+  def unsubscribe(self, topics, properties=None):
     unsubscribe = MQTTV5.Unsubscribes()
+    if properties:
+      unsubscribe.properties = properties
     unsubscribe.packetIdentifier = self.__nextMsgid()
     unsubscribe.topicFilters = topics
     sendtosocket(self.sock, unsubscribe.pack())
@@ -199,7 +201,7 @@ class Client:
     return publish.packetIdentifier
 
 
-  def disconnect(self, properties=None):
+  def disconnect(self, properties=None, reasonCode="Normal disconnection"):
     if self.__receiver:
       self.__receiver.stopping = True
       count = 0
@@ -212,7 +214,7 @@ class Client:
       if self.__receiver and self.__receiver.paused == False:
         assert self.__receiver.inMsgs == {}, self.__receiver.inMsgs
         assert self.__receiver.outMsgs == {}, self.__receiver.outMsgs
-    disconnect = MQTTV5.Disconnects()
+    disconnect = MQTTV5.Disconnects(reasonCode=reasonCode)
     if properties:
       disconnect.properties = properties
     sendtosocket(self.sock, disconnect.pack())
@@ -229,7 +231,12 @@ class Client:
 
   def pingreq(self):
     pingreq = MQTTV5.Pingreqs()
-    return pingreq.json()
+    sendtosocket(self.sock, pingreq.pack())
+    response = MQTTV5.unpackPacket(MQTTV5.getPacket(self.sock))
+    if not response:
+      raise MQTTV5.MQTTException("pingreq failed")
+    assert response.fh.PacketType == MQTTV5.PacketTypes.PINGRESP
+    return True
 
   def terminate(self):
     if self.__receiver:
