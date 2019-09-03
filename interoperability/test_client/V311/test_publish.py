@@ -91,8 +91,8 @@ class TestPublish():
         client.unsubscribe([self.topics[0]])
         callback.clear()
         # [MQTT-3.3.1-10]
-        client.publish(self.topics[0], b"", qos = 0, retained = True)
-        time.sleep(.1)
+        client.publish(self.topics[0], b"", qos = 1, retained = True)
+        waitfor(callback.publisheds, 1, 1)
         client.subscribe([self.topics[0]], [0])
         with pytest.raises(Exception) as e:
             waitfor(callback.messages, 1, 1)

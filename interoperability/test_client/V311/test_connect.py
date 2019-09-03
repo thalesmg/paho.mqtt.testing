@@ -27,6 +27,7 @@ class TestConnect():
         client = mqtt_client.Client("myclientid", callback)
         connack = client.connect(host=self.host, port=self.port)
         client.subscribe([self.topics[0]], [2])
+        waitfor(callback.subscribeds, 1, 1)
         client.publish(self.topics[0], b"qos 0")
         client.publish(self.topics[0], b"qos 1", 1)
         client.publish(self.topics[0], b"qos 2", 2)

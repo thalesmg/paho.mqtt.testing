@@ -77,6 +77,7 @@ class TestSubscribe():
         assert callback.messages[0][3] == True
         client.disconnect()
         callback.clear()
+        cleanup(["myclientid"])
 
     # [MQTT-3.8.4-4], [MQTT-3.8.4-5], [MQTT-3.9.3-1]
     def test_multiple_topics(self):
@@ -89,69 +90,70 @@ class TestSubscribe():
         client.disconnect()
         callback.clear()
 
-    # def test_topic_name_and_filters(self):
-    #     # [MQTT-4.7.1.1]
-    #     client = mqtt_client.Client("myclientid")
-    #     client.connect(host=self.host, port=self.port, cleansession=True)
-    #     client.subscribe([self.wildtopics[0]], [0])
-    #     packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
-    #     assert packet.fh.MessageType == MQTTV3.SUBACK
-    #     client.publish(self.wildtopics[0], b"The wildcard characters MUST NOT be used within a Topic Name")
-    #     assert b'' == client.sock.recv(1)
+    def test_topic_name_and_filters(self):
+        # [MQTT-4.7.1.1]
+        client = mqtt_client.Client("myclientid")
+        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.subscribe([self.wildtopics[0]], [0])
+        packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
+        assert packet.fh.MessageType == MQTTV3.SUBACK
+        client.publish(self.wildtopics[0], b"The wildcard characters MUST NOT be used within a Topic Name")
+        assert b'' == client.sock.recv(1)
 
-    #     # Multi-level wildcard
-    #     client = mqtt_client.Client("myclientid")
-    #     client.connect(host=self.host, port=self.port, cleansession=True)
-    #     # Valid topics
-    #     client.subscribe(["#", "A/#"], [0, 0])
-    #     packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
-    #     assert packet.fh.MessageType == MQTTV3.SUBACK
-    #     # Invalid topics
-    #     client.subscribe(["A/#/B"], [0])
-    #     assert b'' == client.sock.recv(1)
-    #     client.connect(host=self.host, port=self.port, cleansession=True)
-    #     client.subscribe(["A/B#"], [0])
-    #     assert b'' == client.sock.recv(1)
+        # Multi-level wildcard
+        client = mqtt_client.Client("myclientid")
+        client.connect(host=self.host, port=self.port, cleansession=True)
+        # Valid topics
+        client.subscribe(["#", "A/#"], [0, 0])
+        packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
+        assert packet.fh.MessageType == MQTTV3.SUBACK
+        # Invalid topics
+        client.subscribe(["A/#/B"], [0])
+        assert b'' == client.sock.recv(1)
+        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.subscribe(["A/B#"], [0])
+        assert b'' == client.sock.recv(1)
 
-    #     # Single level wildcard
-    #     client = mqtt_client.Client("myclientid")
-    #     client.connect(host=self.host, port=self.port, cleansession=True)
-    #     # Valid topics
-    #     client.subscribe(["+", "+/A/+", "A/+/B"], [0, 0, 0])
-    #     packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
-    #     assert packet.fh.MessageType == MQTTV3.SUBACK
-    #     # Invalid topics
-    #     client.subscribe(["A+"], [0])
-    #     assert b'' == client.sock.recv(1)
+        # Single level wildcard
+        client = mqtt_client.Client("myclientid")
+        client.connect(host=self.host, port=self.port, cleansession=True)
+        # Valid topics
+        client.subscribe(["+", "+/A/+", "A/+/B"], [0, 0, 0])
+        packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
+        assert packet.fh.MessageType == MQTTV3.SUBACK
+        # Invalid topics
+        client.subscribe(["A+"], [0])
+        assert b'' == client.sock.recv(1)
 
-    #     callback = Callbacks()
-    #     client = mqtt_client.Client("myclientid", callback)
-    #     client.connect(host=self.host, port=self.port, cleansession=True)
-    #     client.subscribe(["A/#"], [0])
-    #     waitfor(callback.subscribeds, 1, 1)
-    #     client.publish("A", b"topic A")
-    #     client.publish("A/B", b"topic A/B")
-    #     client.publish("A/B/C", b"topic A/B/C")
-    #     waitfor(callback.messages, 3, 3)
-    #     client.unsubscribe(["A/#"])
-    #     callback.clear()
+        callback = Callbacks()
+        client = mqtt_client.Client("myclientid", callback)
+        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.subscribe(["A/#"], [0])
+        waitfor(callback.subscribeds, 1, 1)
+        client.publish("A", b"topic A")
+        client.publish("A/B", b"topic A/B")
+        client.publish("A/B/C", b"topic A/B/C")
+        waitfor(callback.messages, 3, 3)
+        client.unsubscribe(["A/#"])
+        callback.clear()
 
-    #     client.subscribe(["A/+"], [0])
-    #     waitfor(callback.subscribeds, 1, 1)
-    #     client.publish("A", b"topic A")
-    #     client.publish("A/B", b"topic A/B")
-    #     client.publish("A/B/C", b"topic A/B/C")
-    #     with pytest.raises(Exception) as e:
-    #         waitfor(callback.messages, 3, 3)
-    #     assert len(callback.messages) == 1
-    #     client.unsubscribe(["A/#"])
-    #     callback.clear()
+        client.subscribe(["A/+"], [0])
+        waitfor(callback.subscribeds, 1, 1)
+        client.publish("A", b"topic A")
+        client.publish("A/B", b"topic A/B")
+        client.publish("A/B/C", b"topic A/B/C")
+        with pytest.raises(Exception) as e:
+            waitfor(callback.messages, 3, 3)
+        assert len(callback.messages) == 1
+        client.unsubscribe(["A/#"])
+        callback.clear()
 
-    #     client.subscribe(["#", "+/b"], [0, 0])
-    #     waitfor(callback.subscribeds, 1, 1)
-    #     client.publish("$a/b", b"topic $a/b")
-    #     with pytest.raises(Exception) as e:
-    #         waitfor(callback.messages, 1, 1)
-    #     assert len(callback.messages) == 0
+        client.subscribe(["#", "+/b"], [0, 0])
+        waitfor(callback.subscribeds, 1, 1)
+        client.publish("$a/b", b"topic $a/b")
+        with pytest.raises(Exception) as e:
+            waitfor(callback.messages, 1, 1)
+        # print("messages: {0}".format(callback.messages))
+        assert len(callback.messages) == 0
 
 
