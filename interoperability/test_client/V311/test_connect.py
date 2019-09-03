@@ -38,8 +38,8 @@ class TestConnect():
     def test_second_connect(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
+        client.connect(host=self.host, port=self.port)
         with pytest.raises(Exception) as e:
-            client.connect(host=self.host, port=self.port)
             client.connect(host=self.host, port=self.port, newsocket=False)
         assert e.value.args[0] == 'connect failed - socket closed, no connack'
 
