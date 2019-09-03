@@ -58,6 +58,7 @@ def MessageType(byte):
   return rc
 
 
+
 def getPacket(aSocket):
   "receive the next packet"
   buf = aSocket.recv(1) # get the first byte fixed header
@@ -851,6 +852,10 @@ class Pingreqs(Packets):
     if buffer != None:
       self.unpack(buffer)
 
+  def pack(self):
+    buffer = self.fh.pack(0)
+    return buffer
+
   def unpack(self, buffer):
     assert len(buffer) >= 2
     assert MessageType(buffer) == PINGREQ
@@ -874,6 +879,10 @@ class Pingresps(Packets):
     self.fh.Retain = Retain
     if buffer != None:
       self.unpack(buffer)
+
+  def pack(self):
+    buffer = self.fh.pack(0)
+    return buffer
 
   def unpack(self, buffer):
     assert len(buffer) >= 2
