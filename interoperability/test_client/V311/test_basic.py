@@ -59,12 +59,13 @@ def cleanup(clientids, host="localhost", port=1883):
     curclient.connect(host=host, port=port, cleansession=True)
     curclient.subscribe(["#"], [0])
     # wait for all retained messages to arrive
-    time.sleep(2)
+    waitfor(callback.subscribeds, 1, 2)
     for message in callback.messages:
         # retained flag
         if message[3]:
             print("deleting retained message for topic", message[0])
-            curclient.publish(message[0], b"", 0, retained=True)
+            curclient.publish(message[0], b"", 1, retained=True)
+            waitfor(callback.publisheds, 1, 2)
     curclient.disconnect()
     time.sleep(.1)
 

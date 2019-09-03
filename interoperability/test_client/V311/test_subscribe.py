@@ -9,7 +9,7 @@ import time
 import socket
 import sys
 
-@pytest.fixture(scope="class", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def __cleanup():
     cleanup(["myclientid", "myclientid2"])
 
@@ -77,7 +77,6 @@ class TestSubscribe():
         assert callback.messages[0][3] == True
         client.disconnect()
         callback.clear()
-        cleanup(["myclientid"])
 
     # [MQTT-3.8.4-4], [MQTT-3.8.4-5], [MQTT-3.9.3-1]
     def test_multiple_topics(self):
@@ -153,7 +152,6 @@ class TestSubscribe():
         client.publish("$a/b", b"topic $a/b")
         with pytest.raises(Exception) as e:
             waitfor(callback.messages, 1, 1)
-        # print("messages: {0}".format(callback.messages))
         assert len(callback.messages) == 0
 
 

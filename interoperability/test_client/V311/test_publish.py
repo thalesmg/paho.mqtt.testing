@@ -9,7 +9,7 @@ import time
 import socket
 import sys
 
-@pytest.fixture(scope="class", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def __cleanup():
     cleanup(["myclientid", "myclientid2"])
 

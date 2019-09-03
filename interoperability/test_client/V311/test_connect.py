@@ -98,14 +98,14 @@ class TestConnect():
         # [MQTT-3.1.2-7]
         connack = client.connect(host=self.host, port=self.port, cleansession=True)
         assert connack.flags == 0x00
-        client.publish(self.topics[0], b"retain message", qos = 0, retained = True)
+        client.publish(self.topics[0], b"retain message", qos=0, retained=True)
         client.disconnect()
         callback.clear()
 
         connack = client.connect(host=self.host, port=self.port, cleansession=True)
         assert connack.flags == 0x00
         client.subscribe([self.topics[0]], [0])
-        waitfor(callback.messages, 1, 1)
+        waitfor(callback.messages, 1, 2)
         client.publish(self.topics[0], b"", 0, retained=True)
         time.sleep(.2)
         client.disconnect()
