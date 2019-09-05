@@ -232,11 +232,6 @@ class Client:
   def pingreq(self):
     pingreq = MQTTV5.Pingreqs()
     sendtosocket(self.sock, pingreq.pack())
-    response = MQTTV5.unpackPacket(MQTTV5.getPacket(self.sock))
-    if not response:
-      raise MQTTV5.MQTTException("pingreq failed")
-    assert response.fh.PacketType == MQTTV5.PacketTypes.PINGRESP
-    return True
 
   def terminate(self):
     if self.__receiver:
