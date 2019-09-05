@@ -63,10 +63,13 @@ class Callback:
 
 class Client:
 
-  def __init__(self, clientid):
-    self.clientid = clientid
+  def __init__(self, clientid, callback=None):
+    if isinstance(clientid, str):
+      self.clientid = clientid.encode("utf-8")
+    else:
+      self.clientid = clientid
     self.msgid = 1
-    self.callback = None
+    self.callback = callback
     self.__receiver = None
     self.cleansession = True
 
@@ -91,8 +94,9 @@ class Client:
     self.callback = callback
 
 
-  def connect(self, host="localhost", port=1883, cleansession=True, keepalive=0, newsocket=True, protocolName=None,
-              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, username=None, password=None):
+  def connect(self, host="localhost", port=1883, newsocket=True, assertReturnCode=True,
+              cleansession=True, keepalive=0, protocolName="MQTT", protocolVersion=4, username=None, password=None,
+              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False):
     if newsocket:
       try:
         self.sock.close()
@@ -106,8 +110,8 @@ class Client:
     connect.ClientIdentifier = self.clientid
     connect.CleanSession = cleansession
     connect.KeepAliveTimer = keepalive
-    if protocolName:
-      connect.ProtocolName = protocolName
+    connect.ProtocolName = protocolName
+    connect.ProtocolVersion = protocolVersion
 
     if willFlag:
       connect.WillFlag = True
@@ -132,7 +136,8 @@ class Client:
     assert response.fh.MessageType == MQTTV3.CONNACK
 
     self.cleansession = cleansession
-    assert response.returnCode == 0, "connect was %s" % str(response)
+    if assertReturnCode:
+      assert response.returnCode == 0, "connect was %s" % str(response)
     if self.cleansession or self.__receiver == None:
       self.__receiver = internal.Receivers(self.sock)
     else:
