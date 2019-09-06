@@ -11,7 +11,7 @@ def test_retained_message():
   aclient.publish(topics[1], b"qos 0 retained", 0, retained=True, properties=publish_properties)
   aclient.publish(topics[2], b"qos 1 retained", 1, retained=True, properties=publish_properties)
   aclient.publish(topics[3], b"qos 2 retained", 2, retained=True, properties=publish_properties)
-  waitfor(callback.publisheds, 3, 3)
+  waitfor(callback.publisheds, 2, 3)
   aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.messages, 3, 3)
   assert len(callback.messages) == 3
@@ -25,12 +25,12 @@ def test_retained_message():
   aclient.publish(topics[1], b"new qos 0 retained", 0, retained=True, properties=publish_properties)
   aclient.publish(topics[2], b"new qos 1 retained", 1, retained=True, properties=publish_properties)
   aclient.publish(topics[3], b"new qos 2 retained", 2, retained=True, properties=publish_properties)
-  waitfor(callback.publisheds, 6, 6)
+  waitfor(callback.publisheds, 4, 6)
   aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.subscribeds, 1, 3)
+  waitfor(callback.messages, 3, 3)
   aclient.disconnect()
   # [MQTT-3.3.1-5] [MQTT-3.3.1-8]
-  waitfor(callback.messages, 3, 3)
   assert len(callback.messages) == 3
   assert callback.messages[0][1] in [ b'new qos 0 retained', b'new qos 1 retained', b'new qos 2 retained']
   assert callback.messages[1][1] in [ b'new qos 0 retained', b'new qos 1 retained', b'new qos 2 retained']
@@ -42,14 +42,16 @@ def test_retained_message():
   aclient.publish(topics[1], b"", 0, retained=True)
   aclient.publish(topics[2], b"", 1, retained=True)
   aclient.publish(topics[3], b"", 2, retained=True)
-  waitfor(callback.publisheds, 3, 3)
+  waitfor(callback.publisheds, 2, 3)
   aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.subscribeds, 1, 3)
+  waitfor(callback.messages, 3, 3)
   aclient.disconnect()
   assert len(callback.messages) == 0 # [MQTT-3.3.1-6] 
 
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
+  waitfor(callback2.messages, 3, 3)
   bclient.disconnect()
   assert len(callback2.messages) == 0 # [MQTT-3.3.1-7]
 
@@ -58,27 +60,27 @@ def test_retained_message():
   aclient.publish(topics[1], b"qos 0 retained", 0, retained=True)
   aclient.publish(topics[2], b"qos 1 retained", 1, retained=True)
   aclient.publish(topics[3], b"qos 2 retained", 2, retained=True)
-  waitfor(callback.publisheds, 3, 3)
+  waitfor(callback.publisheds, 2, 3)
   aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2)])
   # [MQTT-3.3.1-9] 
   callback2.clear()
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2,False,False,0)])
-  waitfor(callback2.subscribeds, 1, 3)
+  waitfor(callback2.messages, 1, 3)
   bclient.disconnect()
   assert len(callback2.messages) == 3
   # [MQTT-3.3.1-10] 
   callback2.clear()
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2,False,False,1)])
-  waitfor(callback2.subscribeds, 1, 3)
+  waitfor(callback2.messages, 1, 3)
   bclient.disconnect()
   assert len(callback2.messages) == 0
   # [MQTT-3.3.1-11]
   callback2.clear()
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2,False,False,2)])
-  waitfor(callback2.subscribeds, 1, 3)
+  waitfor(callback2.messages, 1, 3)
   bclient.disconnect()
   assert len(callback2.messages) == 0
   # Retain As Published
@@ -157,10 +159,10 @@ def test_message_expiry_interval():
   aclient.publish("topic/C", b"qos 1 - don't expire", 1, retained=True, properties=publish_properties)
   aclient.publish("topic/D", b"qos 2 - don't expire", 2, retained=True, properties=publish_properties)
 
-  time.sleep(3)
+  waitfor(callback.messages, 4, 3)
   bclient.connect(host=host, port=port, cleanstart=False)
   bclient.subscribe(["topic/+"], [MQTTV5.SubscribeOptions(2)])
-  time.sleep(1)
+  waitfor(callback2.messages, 2, 3)
   bclient.disconnect()
   aclient.disconnect()
   # [MQTT-3.3.2-5] 
@@ -304,8 +306,6 @@ def test_overlapping_subscriptions():
   aclient.subscribe([wildtopics[6], wildtopics[0]], [MQTTV5.SubscribeOptions(2), MQTTV5.SubscribeOptions(1)], properties=sub_properties)
   waitfor(callback.subscribeds, 2, 3)
   aclient.publish(topics[3], b"overlapping topic filters", 2)
-  # while aclient.getReceiver().inMsgs != {}:
-  #   time.sleep(.1)
   waitfor(callback.publisheds, 1, 3)
   aclient.disconnect()
   # [MQTT-3.3.4-2]

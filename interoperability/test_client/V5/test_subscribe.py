@@ -23,7 +23,9 @@ def test_subscribe_options():
   waitfor(callback.subscribeds, 1, 3)
   bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2, noLocal=True)])
   waitfor(callback2.subscribeds, 1, 3)
+
   aclient.publish(topics[0], b"noLocal test", 1, retained=False)
+  waitfor(callback.messages, 1, 3)
   waitfor(callback2.messages, 1, 3)
 
   assert len(callback.messages) == 0
@@ -40,9 +42,7 @@ def test_subscribe_options():
   waitfor(callback.subscribeds, 1, 3)
   aclient.publish(topics[0], b"retain as published false", 1, retained=False)
   aclient.publish(topics[0], b"retain as published true", 1, retained=True)
-
   waitfor(callback.messages, 2, 3)
-  time.sleep(1)
 
   aclient.disconnect()
   assert len(callback.messages) == 2
@@ -55,9 +55,9 @@ def test_subscribe_options():
   aclient.publish(topics[1], b"qos 0", 0, retained=True)
   aclient.publish(topics[2], b"qos 1", 1, retained=True)
   aclient.publish(topics[3], b"qos 2", 2, retained=True)
-  time.sleep(1)
+  waitfor(callback.publisheds, 2, 3)
   aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2, retainHandling=1)])
-  time.sleep(1)
+  waitfor(callback.messages, 3, 3)
   assert len(callback.messages) == 3
   qoss = [callback.messages[i][2] for i in range(3)]
   assert 1 in qoss and 2 in qoss and 0 in qoss
@@ -66,15 +66,14 @@ def test_subscribe_options():
   callback.clear()
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2, retainHandling=2)])
-  time.sleep(1)
+  waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 0
   aclient.disconnect()
 
   callback.clear()
   aclient.connect(host=host, port=port, cleanstart=True)
-  time.sleep(1)
   aclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2, retainHandling=0)])
-  time.sleep(1)
+  waitfor(callback.messages, 3, 3)
   assert len(callback.messages) == 3
   qoss = [callback.messages[i][2] for i in range(3)]
   assert 1 in qoss and 2 in qoss and 0 in qoss
@@ -95,7 +94,7 @@ def test_subscribe_actions():
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.publish(topics[0], b"test_subscribe_actions: retain should be true", 2, retained=True)
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=2, retainAsPublished=1, retainHandling=0)])
-  waitfor(callback.subscribeds, 1, 3)
+  waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 1
   assert callback.messages[0][0] == topics[0]
   assert callback.messages[0][1] == b'test_subscribe_actions: retain should be true'
@@ -104,7 +103,7 @@ def test_subscribe_actions():
   callback.clear()
 
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=1, retainAsPublished=0, retainHandling=0)])
-  waitfor(callback.subscribeds, 1, 3)
+  waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 1
   assert callback.messages[0][0] == topics[0]
   assert callback.messages[0][1] == b'test_subscribe_actions: retain should be true'
@@ -122,7 +121,7 @@ def test_subscribe_actions():
   callback.clear()
   
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=2, retainHandling=2)])
-  waitfor(callback.subscribeds, 1, 3)
+  waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 0
   aclient.disconnect()
   cleanRetained()

@@ -69,6 +69,6 @@ def test_disconnect_action():
   bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback2.subscribeds, 1, 3)
   aclient.disconnect()
-  waitfor(callback.messages, 1, 3)
+  waitfor(callback2.messages, 1, 3)
   # [MQTT-3.14.4-3]
   assert len(callback2.messages) == 0
