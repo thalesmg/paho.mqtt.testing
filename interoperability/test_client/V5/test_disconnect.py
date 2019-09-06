@@ -1,6 +1,7 @@
 from .test_basic import * 
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
+@pytest.mark.skip(strict=True, reason='server not supported')
 def test_reason_code():
   # [MQTT-3.14.2-1]
   aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
@@ -11,7 +12,7 @@ def test_reason_code():
   waitfor(callback2.subscribeds, 1, 3)
 
   aclient.disconnect(reasonCode="Disconnect with will message")
-  waitfor(callback2.messages, 1, 10)
+  waitfor(callback2.messages, 1, 3)
   bclient.disconnect()
   assert len(callback2.messages) == 1
   assert callback2.messages[0][1] == b"will message"
@@ -59,8 +60,7 @@ def test_disconnect_action():
   waitfor(callback.disconnects, 1, 3)
   assert callback.disconnects[0]["reasonCode"].value == 130
   # [MQTT-3.14.4-1] [MQTT-3.14.4-2]
-  with pytest.raises(Exception):
-    aclient.pingreq()
+  assert aclient.sock.recv(1024) == b''
 
   # client send disconnect
   aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,

@@ -70,7 +70,10 @@ def cleanRetained():
   time.sleep(2) # wait for all retained messages to arrive
   for message in callback.messages:
     logging.info("deleting retained message for topic %s", message[0])
-    curclient.publish(message[0], b"", 0, retained=True)
+    curclient.publish(message[0], b"", 1, retained=True)
+    waitfor(callback.publisheds, 1, 3)
+    assert len(callback.publisheds) == 1
+    callback.clear()
   curclient.disconnect()
   time.sleep(.1)
 
@@ -93,4 +96,3 @@ def waitfor(queue, depth, limit):
     interval = .5
     total += interval
     time.sleep(interval)
- 

@@ -1,7 +1,7 @@
 from .test_basic import * 
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
-# @pytest.mark.xfail(strict=True, reason='unconfirmed'
+# @pytest.mark.skip(strict=True, reason='unconfirmed'
 def test_subscribe():
   # [MQTT-3.8.3-1]
   # with pytest.raises(Exception):
@@ -93,6 +93,7 @@ def test_subscribe_actions():
   callback.clear()
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.publish(topics[0], b"test_subscribe_actions: retain should be true", 2, retained=True)
+  waitfor(callback.publisheds, 1, 3)
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=2, retainAsPublished=1, retainHandling=0)])
   waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 1

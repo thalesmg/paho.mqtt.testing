@@ -67,6 +67,8 @@ def cleanup(clientids, host="localhost", port=1883):
             print("deleting retained message for topic", message[0])
             curclient.publish(message[0], b"", 1, retained=True)
             waitfor(callback.publisheds, 1, 2)
+            assert len(callback.publisheds) == 1
+            callback.clear()
     curclient.disconnect()
     time.sleep(.1)
 

@@ -1,7 +1,7 @@
 from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, mqtt.clients.V5 as mqtt_client, pytest,time
 
-# @pytest.mark.xfail(strict=True, reason='unconfirmed'
+@pytest.mark.skip(strict=True, reason='server not supported')
 def test_unsubscribe_payload():
   # [MQTT-3.10.3-1]
   with pytest.raises(Exception):

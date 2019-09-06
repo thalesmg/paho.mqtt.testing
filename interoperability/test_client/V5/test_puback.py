@@ -8,7 +8,7 @@ def test_reason_code():
   waitfor(callback.publisheds, 1, 3)
   assert not callback.publisheds[0][1].value == None
 
-@pytest.mark.xfail(strict=True, reason='server not supported')
+@pytest.mark.skip(strict=True, reason='server not supported')
 def test_reason_string():
   # [MQTT-3.4.2-2]
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
@@ -28,7 +28,7 @@ def test_reason_string():
   assert len(callback.publisheds) == 1
   assert not callback.publisheds[0][2].ReasonString
 
-@pytest.mark.xfail(strict=True, reason='server not supported')
+@pytest.mark.skip(strict=True, reason='server not supported')
 def test_user_properties():
   # [MQTT-3.4.2-3]
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
