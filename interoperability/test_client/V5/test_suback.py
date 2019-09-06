@@ -1,7 +1,7 @@
 from .test_basic import * 
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
-# @pytest.mark.xfail(strict=True, reason='unconfirmed'
+@pytest.mark.xfail(strict=True, reason='server not supported')
 def test_reason_string():
   # [MQTT-3.9.2-1]
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
@@ -20,7 +20,7 @@ def test_reason_string():
   aclient.disconnect()
   assert not callback.subscribeds[0][2].ReasonString
 
-# @pytest.mark.xfail(strict=True, reason='unconfirmed'
+@pytest.mark.xfail(strict=True, reason='server not supported')
 def test_user_properties():
   # [MQTT-3.9.2-2]
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)

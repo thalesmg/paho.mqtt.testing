@@ -4,14 +4,15 @@ import mqtt.formats.MQTTV5 as MQTTV5, time
 # @pytest.mark.xfail(strict=True, reason='unconfirmed'
 def test_subscribe():
   # [MQTT-3.8.3-1]
-  with pytest.raises(Exception):
-    aclient.connect(host=host, port=port, cleanstart=True)
-    aclient.subscribe(["订阅主题".encode("gbk")], [MQTTV5.SubscribeOptions(2)])
+  # with pytest.raises(Exception):
+  #   aclient.connect(host=host, port=port, cleanstart=True)
+  #   aclient.subscribe(["订阅主题".encode("gbk")], [MQTTV5.SubscribeOptions(2)])
   
   # [MQTT-3.8.3-2]
-  with pytest.raises(Exception):
     aclient.connect(host=host, port=port, cleanstart=True)
     aclient.subscribe([], [MQTTV5.SubscribeOptions(2)])
+    waitfor(callback.disconnects, 1, 2)
+    assert callback.disconnects[0]["reasonCode"].value == 143
   
 def test_subscribe_options():
   # [MQTT-3.8.3-3]
@@ -92,23 +93,34 @@ def test_subscribe_actions():
   # [MQTT-3.8.4-3] [MQTT-3.8.4-4]
   callback.clear()
   aclient.connect(host=host, port=port, cleanstart=True)
-  aclient.publish(topics[0], b"test_subscribe_actions", 2, retained=True)
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=1, retainAsPublished=0, retainHandling=0)])
-  waitfor(callback.subscribeds, 1, 3)
-  assert len(callback.messages) == 1
-  assert callback.messages[0][0] == topics[0]
-  assert callback.messages[0][1] == b'test_subscribe_actions'
-  assert callback.messages[0][2] == 1
-  assert callback.messages[0][3] == False
-  callback.clear()
+  aclient.publish(topics[0], b"test_subscribe_actions: retain should be true", 2, retained=True)
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=2, retainAsPublished=1, retainHandling=0)])
   waitfor(callback.subscribeds, 1, 3)
   assert len(callback.messages) == 1
   assert callback.messages[0][0] == topics[0]
-  assert callback.messages[0][1] == b'test_subscribe_actions'
+  assert callback.messages[0][1] == b'test_subscribe_actions: retain should be true'
   assert callback.messages[0][2] == 2
   assert callback.messages[0][3] == True
   callback.clear()
+
+  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=1, retainAsPublished=0, retainHandling=0)])
+  waitfor(callback.subscribeds, 1, 3)
+  assert len(callback.messages) == 1
+  assert callback.messages[0][0] == topics[0]
+  assert callback.messages[0][1] == b'test_subscribe_actions: retain should be true'
+  assert callback.messages[0][2] == 1
+  assert callback.messages[0][3] == True
+  callback.clear()
+
+  aclient.publish(topics[0], b"test_subscribe_actions: retain should be flase", 2, retained=True)
+  waitfor(callback.messages, 1, 3)
+  assert len(callback.messages) == 1
+  assert callback.messages[0][0] == topics[0]
+  assert callback.messages[0][1] == b'test_subscribe_actions: retain should be flase'
+  assert callback.messages[0][2] == 1
+  assert callback.messages[0][3] == False
+  callback.clear()
+  
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=2, retainHandling=2)])
   waitfor(callback.subscribeds, 1, 3)
   assert len(callback.messages) == 0

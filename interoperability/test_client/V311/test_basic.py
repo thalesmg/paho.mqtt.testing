@@ -60,6 +60,7 @@ def cleanup(clientids, host="localhost", port=1883):
     curclient.subscribe(["#"], [0])
     # wait for all retained messages to arrive
     waitfor(callback.subscribeds, 1, 2)
+    time.sleep(2)
     for message in callback.messages:
         # retained flag
         if message[3]:
