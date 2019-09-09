@@ -1,7 +1,12 @@
 from .test_basic import * 
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
-# @pytest.mark.skip(strict=True, reason='unconfirmed'
+@pytest.fixture(scope="module", autouse=True)
+def __setUp(pytestconfig):
+  global host, port
+  host = pytestconfig.getoption('host')
+  port = int(pytestconfig.getoption('port'))
+
 def test_subscribe():
   # [MQTT-3.8.3-1]
   # with pytest.raises(Exception):
@@ -79,7 +84,7 @@ def test_subscribe_options():
   assert 1 in qoss and 2 in qoss and 0 in qoss
   aclient.disconnect()
 
-  cleanRetained()
+  cleanRetained(host, port)
 
 def test_subscribe_actions():
   # [MQTT-3.8.4-1] [MQTT-3.8.4-2]
@@ -125,7 +130,7 @@ def test_subscribe_actions():
   waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 0
   aclient.disconnect()
-  cleanRetained()
+  cleanRetained(host, port)
 
   # [MQTT-3.8.4-5]
   callback.clear()

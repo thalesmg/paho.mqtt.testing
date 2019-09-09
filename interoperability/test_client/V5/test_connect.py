@@ -1,28 +1,19 @@
 from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, mqtt.clients.V5 as mqtt_client, pytest,time
 
+@pytest.fixture(scope="module", autouse=True)
+def __setUp(pytestconfig):
+  global host, port
+  host = pytestconfig.getoption('host')
+  port = int(pytestconfig.getoption('port'))
+  cleanup(host, port)
 
-def test_basic():
-  aclient.connect(host=host, port=port)
-  aclient.disconnect()
-
-  rc = aclient.connect(host=host, port=port)
-  assert rc.reasonCode.getName() == "Success"
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-  waitfor(callback.subscribeds, 1, 3)
-  aclient.publish(topics[0], b"qos 0")
-  aclient.publish(topics[0], b"qos 1", 1)
-  aclient.publish(topics[0], b"qos 2", 2)
-  waitfor(callback.messages, 3, 3)
-  assert len(callback.messages) == 3
-  aclient.disconnect()
-
+@pytest.mark.skip(strict=True, reason='server not supported')
+def test_protocol():
   with pytest.raises(Exception):
     aclient.connect(host=host, port=port)
     aclient.connect(host=host, port=port, newsocket=False) # should fail - second connect on socket [MQTT-3.1.0-2]
 
-@pytest.mark.skip(strict=True, reason='server not supported')
-def test_protocol():
   # [MQTT-3.1.2-1]
   with pytest.raises(Exception):
     aclient.connect(host=host, port=port, protocolName="hj")
@@ -96,7 +87,7 @@ def test_will_message():
   waitfor(callback2.messages, 1, 10)
   bclient.disconnect()
   assert len(callback2.messages) == 0
-  cleanup()
+  cleanRetained(host, port)
  
 def test_will_qos():
   # [MQTT-3.1.2-11]
@@ -133,7 +124,7 @@ def test_will_qos():
     willProperties=will_properties)
   aclient.disconnect
 
-  cleanup()
+  cleanRetained(host, port)
 
 def test_will_retain():
   # [MQTT-3.1.2-13]
@@ -187,7 +178,7 @@ def test_will_retain():
   assert len(callback2.messages) == 1
   assert callback2.messages[0][3]
 
-  cleanup()
+  cleanRetained(host, port)
 
 @pytest.mark.skip(strict=True, reason='server not supported')
 def test_username_flag():

@@ -1,6 +1,12 @@
 from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, mqtt.clients.V5 as mqtt_client, pytest,time
 
+@pytest.fixture(scope="module", autouse=True)
+def __setUp(pytestconfig):
+  global host, port
+  host = pytestconfig.getoption('host')
+  port = int(pytestconfig.getoption('port'))
+
 @pytest.mark.skip(strict=True, reason='server not supported')
 def test_unsubscribe_payload():
   # [MQTT-3.10.3-1]

@@ -61,11 +61,16 @@ nosubscribe_topics = ("test/nosubscribe",)
 
 @pytest.fixture(scope="session", autouse=True)
 def __setUp(pytestconfig):
-  global host, port
-  host = pytestconfig.getoption('host')
-  port = int(pytestconfig.getoption('port'))
-  cleanup(host, port)
-  cleanRetained(host, port)
+  global host1, port1, host2, port2
+  host1 = pytestconfig.getoption('host1')
+  port1 = int(pytestconfig.getoption('port1'))
+  cleanup(host1, port1)
+  cleanRetained(host1, port1)
+
+  host2 = pytestconfig.getoption('host2')
+  port2 = int(pytestconfig.getoption('port2'))
+  cleanup(host2, port2)
+  cleanRetained(host2, port2)
 
 @pytest.fixture(scope="function", autouse=True)
 def callbackClear():
@@ -106,16 +111,21 @@ def waitfor(queue, depth, limit):
     time.sleep(interval)
 
 def test_basic():
-  aclient.connect(host=host, port=port)
-  aclient.disconnect()
+  rc1 = aclient.connect(host=host1, port=port1)
+  assert rc1.reasonCode.getName() == "Success"
 
-  rc = aclient.connect(host=host, port=port)
-  assert rc.reasonCode.getName() == "Success"
+  rc2 = bclient.connect(host=host2, port=port2)
+  assert rc2.reasonCode.getName() == "Success"
+
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.subscribeds, 1, 3)
-  aclient.publish(topics[0], b"qos 0")
-  aclient.publish(topics[0], b"qos 1", 1)
-  aclient.publish(topics[0], b"qos 2", 2)
+
+  bclient.publish(topics[0], b"qos 0")
+  bclient.publish(topics[0], b"qos 1", 1)
+  bclient.publish(topics[0], b"qos 2", 2)
+  waitfor(callback2.publisheds, 2, 3)
+
   waitfor(callback.messages, 3, 3)
   assert len(callback.messages) == 3
   aclient.disconnect()
+  bclient.disconnect()

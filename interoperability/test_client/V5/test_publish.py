@@ -1,6 +1,12 @@
 from .test_basic import * 
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
+@pytest.fixture(scope="module", autouse=True)
+def __setUp(pytestconfig):
+  global host, port
+  host = pytestconfig.getoption('host')
+  port = int(pytestconfig.getoption('port'))
+  
 def test_retained_message():
   callback.clear()
   aclient.connect(host=host, port=port, cleanstart=True)
@@ -126,7 +132,7 @@ def test_message_expiry_interval():
   assert callback2.messages[0][5].MessageExpiryInterval < 6
   assert callback2.messages[1][5].MessageExpiryInterval < 6
 
-  cleanRetained()
+  cleanRetained(host, port)
 
 # set mqtt.max_topic_alias = 10 in emqx.conf
 @pytest.mark.skip(strict=True, reason='server not supported')

@@ -1,6 +1,12 @@
 from .test_basic import * 
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
+@pytest.fixture(scope="module", autouse=True)
+def __setUp(pytestconfig):
+  global host, port
+  host = pytestconfig.getoption('host')
+  port = int(pytestconfig.getoption('port'))
+
 def test_session_present():
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
   connect_properties.SessionExpiryInterval = 5
