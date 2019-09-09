@@ -9,16 +9,17 @@ import time
 import socket
 import sys
 
-@pytest.fixture(scope="function", autouse=True)
-def __cleanup():
-    cleanup(["myclientid", "myclientid2"])
+@pytest.fixture(scope="class", autouse=True)
+def __cleanup(pytestconfig):
+    global host, port
+    host = pytestconfig.getoption('host')
+    port = int(pytestconfig.getoption('port'))
+    cleanup(["myclientid", "myclientid2"], host=host, port=port)
 
 class TestSubscribe():
 
     @pytest.fixture(scope="function", autouse=True)
-    def __init(self, pytestconfig):
-        self.host = pytestconfig.getoption('host')
-        self.port = int(pytestconfig.getoption('port'))
+    def __init(self):
         topic_prefix = "client_test3/"
         self.topics = [topic_prefix + topic for topic in ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA"]]
         self.wildtopics = [topic_prefix + topic for topic in ["TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#"]]
@@ -26,7 +27,7 @@ class TestSubscribe():
     def test_behaviour(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.wildtopics[0]], [0])
         waitfor(callback.subscribeds, 1, 1)
         client.publish(self.topics[1], b"test subscribe behaviour 1")
@@ -39,7 +40,7 @@ class TestSubscribe():
     def test_no_payload(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         subscribe = MQTTV3.Subscribes()
         subscribe.messageIdentifier = 1
         client.sock.send(subscribe.pack())
@@ -48,7 +49,7 @@ class TestSubscribe():
     # [MQTT-3.8.4-1], [MQTT-3.8.4-2]
     def test_suback(self):
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         subscribe = MQTTV3.Subscribes()
         subscribe.data.append((self.topics[0], 0))
         subscribe.messageIdentifier = 1
@@ -61,7 +62,7 @@ class TestSubscribe():
     def test_update_subscription(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.publish(self.topics[0], b"qos should be 1", qos = 2, retained=True)
         client.subscribe([self.topics[0]], [0])
         waitfor(callback.subscribeds, 1, 1)
@@ -82,7 +83,7 @@ class TestSubscribe():
     def test_multiple_topics(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.topics[0], self.topics[1], self.topics[2]], [0, 1, 2])
         waitfor(callback.subscribeds, 1, 1)
         assert callback.subscribeds[0][1] == [0, 1, 2]
@@ -92,7 +93,7 @@ class TestSubscribe():
     def test_topic_name_and_filters(self):
         # [MQTT-4.7.1.1]
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.wildtopics[0]], [0])
         packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
         assert packet.fh.MessageType == MQTTV3.SUBACK
@@ -101,7 +102,7 @@ class TestSubscribe():
 
         # Multi-level wildcard
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         # Valid topics
         client.subscribe(["#", "A/#"], [0, 0])
         packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
@@ -109,13 +110,13 @@ class TestSubscribe():
         # Invalid topics
         client.subscribe(["A/#/B"], [0])
         assert b'' == client.sock.recv(1)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe(["A/B#"], [0])
         assert b'' == client.sock.recv(1)
 
         # Single level wildcard
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         # Valid topics
         client.subscribe(["+", "+/A/+", "A/+/B"], [0, 0, 0])
         packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
@@ -126,7 +127,7 @@ class TestSubscribe():
 
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe(["A/#"], [0])
         waitfor(callback.subscribeds, 1, 1)
         client.publish("A", b"topic A")

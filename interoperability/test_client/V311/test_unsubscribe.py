@@ -10,15 +10,16 @@ import socket
 import sys
 
 @pytest.fixture(scope="class", autouse=True)
-def __cleanup():
-    cleanup(["myclientid", "myclientid2"])
+def __cleanup(pytestconfig):
+    global host, port
+    host = pytestconfig.getoption('host')
+    port = int(pytestconfig.getoption('port'))
+    cleanup(["myclientid", "myclientid2"], host=host, port=port)
 
 class TestUnsubscribe():
 
     @pytest.fixture(scope="function", autouse=True)
-    def __init(self, pytestconfig):
-        self.host = pytestconfig.getoption('host')
-        self.port = int(pytestconfig.getoption('port'))
+    def __init(self):
         topic_prefix = "client_test3/"
         self.topics = [topic_prefix + topic for topic in ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA"]]
         self.wildtopics = [topic_prefix + topic for topic in ["TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#"]]
@@ -27,7 +28,7 @@ class TestUnsubscribe():
     def test_no_payload(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         unsubscribe = MQTTV3.Unsubscribes()
         unsubscribe.messageIdentifier = 1
         client.sock.send(unsubscribe.pack())
@@ -37,7 +38,7 @@ class TestUnsubscribe():
         # [MQTT-3.10.4.1], [MQTT-3.10.4.2], [MQTT-3.10.4-4]
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.wildtopics[0]], [0])
         waitfor(callback.subscribeds, 1, 1)
         client.publish(self.topics[1], b"test behaviour: subscribe")
@@ -55,7 +56,7 @@ class TestUnsubscribe():
         # Set retry_interval = 2s in emqx.conf
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.wildtopics[0]], [2])
         waitfor(callback.subscribeds, 1, 1)
         client.pause() # stops responding to incoming publishes
@@ -73,7 +74,7 @@ class TestUnsubscribe():
 
         # [MQTT-3.10.4-4], [MQTT-3.10.4-5]
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         unsubscribe = MQTTV3.Unsubscribes()
         unsubscribe.data= self.topics[0]
         unsubscribe.messageIdentifier = 1

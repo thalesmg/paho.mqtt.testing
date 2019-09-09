@@ -9,16 +9,17 @@ import time
 import socket
 import sys
 
-@pytest.fixture(scope="function", autouse=True)
-def __cleanup():
-    cleanup(["myclientid", "myclientid2"])
+@pytest.fixture(scope="class", autouse=True)
+def __cleanup(pytestconfig):
+    global host, port
+    host = pytestconfig.getoption('host')
+    port = int(pytestconfig.getoption('port'))
+    cleanup(["myclientid", "myclientid2"], host=host, port=port)
 
 class TestPublish():
 
     @pytest.fixture(scope="function", autouse=True)
-    def __init(self, pytestconfig):
-        self.host = pytestconfig.getoption('host')
-        self.port = int(pytestconfig.getoption('port'))
+    def __init(self):
         topic_prefix = "client_test3/"
         self.topics = [topic_prefix + topic for topic in ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA"]]
         self.wildtopics = [topic_prefix + topic for topic in ["TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#"]]
@@ -30,8 +31,8 @@ class TestPublish():
         callback2 = Callbacks()
         client2 = mqtt_client.Client("myclientid2")
 
-        client.connect(host=self.host, port=self.port, cleansession=True)
-        client2.connect(host=self.host, port=self.port, cleansession=False)
+        client.connect(host=host, port=port, cleansession=True)
+        client2.connect(host=host, port=port, cleansession=False)
 
         client2.subscribe([self.topics[0]], [1])
         packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client2.sock))
@@ -66,14 +67,14 @@ class TestPublish():
 
     def test_invalid_qos(self):
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.publish(self.topics[0], b"bad qos", qos=3)
         assert b'' == client.sock.recv(1)
 
     def test_retain_message(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.topics[0]], [0])
         time.sleep(0.5)
         client.publish(self.topics[0], b"retain message", qos = 0, retained = True)
@@ -102,13 +103,13 @@ class TestPublish():
     def test_topic_name(self):
         # [MQTT-3.3.2-2]
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.publish(self.wildtopics[0], b"topic contains wildcard characters", qos = 0)
         assert b'' == client.sock.recv(1)
 
     def test_actions(self):
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         
         # QoS 0
         client.publish(self.topics[0], b"qos 0", qos = 0)
@@ -140,7 +141,7 @@ class TestPublish():
 
         callback2 = Callbacks()
         client2 = mqtt_client.Client("myclientid2", callback2)
-        client2.connect(host=self.host, port=self.port, cleansession=True)
+        client2.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.topics[0]], [2])
         MQTTV3.getPacket(client.sock)
         client2.publish(self.topics[0], b"qos 2", qos = 2)
@@ -162,7 +163,7 @@ class TestPublish():
         # [MQTT-3.3.5-1]
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
-        client.connect(host=self.host, port=self.port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.wildtopics[0]], [0])
         client.subscribe([self.topics[1]], [2])
         time.sleep(.5)

@@ -10,15 +10,16 @@ import socket
 import sys
 
 @pytest.fixture(scope="class", autouse=True)
-def __cleanup():
-    cleanup(["myclientid", "myclientid2"])
+def __cleanup(pytestconfig):
+    global host, port
+    host = pytestconfig.getoption('host')
+    port = int(pytestconfig.getoption('port'))
+    cleanup(["myclientid", "myclientid2"], host=host, port=port)
 
 class TestPing():
 
     @pytest.fixture(scope="function", autouse=True)
-    def __init(self, pytestconfig):
-        self.host = pytestconfig.getoption('host')
-        self.port = int(pytestconfig.getoption('port'))
+    def __init(self):
         topic_prefix = "client_test3/"
         self.topics = [topic_prefix + topic for topic in ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA"]]
         self.wildtopics = [topic_prefix + topic for topic in ["TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#"]]
@@ -26,7 +27,7 @@ class TestPing():
     def test_behaviour(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid")
-        client.connect(host=self.host, port=self.port, cleansession=True, keepalive=1)
+        client.connect(host=host, port=port, cleansession=True, keepalive=1)
         spent = 0
         while spent < 3:
             pingreq = MQTTV3.Pingreqs()
