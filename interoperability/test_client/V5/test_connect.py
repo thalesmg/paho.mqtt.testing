@@ -8,6 +8,21 @@ def __setUp(pytestconfig):
   port = int(pytestconfig.getoption('port'))
   cleanup(host, port)
 
+def test_basic():
+  aclient.connect(host=host, port=port)
+  aclient.disconnect()
+
+  rc = aclient.connect(host=host, port=port)
+  assert rc.reasonCode.getName() == "Success"
+  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+  waitfor(callback.subscribeds, 1, 3)
+  aclient.publish(topics[0], b"qos 0")
+  aclient.publish(topics[0], b"qos 1", 1)
+  aclient.publish(topics[0], b"qos 2", 2)
+  waitfor(callback.messages, 3, 3)
+  assert len(callback.messages) == 3
+  aclient.disconnect()
+
 @pytest.mark.skip(strict=True, reason='server not supported')
 def test_protocol():
   with pytest.raises(Exception):

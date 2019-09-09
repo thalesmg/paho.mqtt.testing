@@ -104,18 +104,3 @@ def waitfor(queue, depth, limit):
     interval = .5
     total += interval
     time.sleep(interval)
-
-def test_basic():
-  aclient.connect(host=host, port=port)
-  aclient.disconnect()
-
-  rc = aclient.connect(host=host, port=port)
-  assert rc.reasonCode.getName() == "Success"
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-  waitfor(callback.subscribeds, 1, 3)
-  aclient.publish(topics[0], b"qos 0")
-  aclient.publish(topics[0], b"qos 1", 1)
-  aclient.publish(topics[0], b"qos 2", 2)
-  waitfor(callback.messages, 3, 3)
-  assert len(callback.messages) == 3
-  aclient.disconnect()
