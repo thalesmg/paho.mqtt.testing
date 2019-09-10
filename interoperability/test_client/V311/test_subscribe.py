@@ -90,6 +90,7 @@ class TestSubscribe():
         client.disconnect()
         callback.clear()
 
+    @pytest.mark.skip(reason='unconfirmed')
     def test_topic_name_and_filters(self):
         # [MQTT-4.7.1.1]
         client = mqtt_client.Client("myclientid")
