@@ -7,6 +7,19 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
   
+@pytest.mark.skip(strict=True, reason='server not supported')
+def test_qos():
+  #[MQTT-3.3.1-4]
+  aclient.connect(host=host, port=port)
+
+  publish = MQTTV5.Publishes()
+  publish.fh.QoS = 3
+  mqtt_client.main.sendtosocket(aclient.sock, publish.pack())
+  
+  waitfor(callback.disconnects, 1, 3)
+  assert len(callback.disconnects) == 1
+  assert callback.disconnects[0]["reasonCode"].value == 129
+
 def test_retained_message():
   callback.clear()
   aclient.connect(host=host, port=port, cleanstart=True)
@@ -15,16 +28,43 @@ def test_retained_message():
   aclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 1
+  assert callback.messages[0][0] == topics[2]
+  assert callback.messages[0][1] == b"qos 1 retained"
+  aclient.unsubscribe([topics[2]])
+  waitfor(callback.unsubscribeds, 1, 3)
+  
+  # [MQTT-3.3.1-5]
+  callback.clear()
+  aclient.publish(topics[2], b"qos 1 new retained", 1, retained=True)
+  waitfor(callback.publisheds, 1, 3)
+  aclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
+  waitfor(callback.messages, 1, 3)
+  assert len(callback.messages) == 1
+  assert callback.messages[0][0] == topics[2]
+  assert callback.messages[0][1] == b"qos 1 new retained"
+  aclient.unsubscribe([topics[2]])
+  waitfor(callback.unsubscribeds, 1, 3)
+  
+  # [MQTT-3.3.1-8]
+  callback.clear()
+  aclient.publish(topics[2], b"qos 1 not retained", 1, retained=False)
+  waitfor(callback.publisheds, 1, 3)
+  aclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
+  waitfor(callback.messages, 1, 3)
+  assert len(callback.messages) == 1
+  assert callback.messages[0][0] == topics[2]
+  assert callback.messages[0][1] == b"qos 1 new retained"
   aclient.unsubscribe([topics[2]])
   waitfor(callback.unsubscribeds, 1, 3)
 
+  # [MQTT-3.3.1-6]
   callback.clear()
   aclient.publish(topics[2], b"", 1, retained=True)
   waitfor(callback.publisheds, 1, 3)
   aclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.subscribeds, 1, 3)
   waitfor(callback.messages, 1, 3)
-  assert len(callback.messages) == 0 # [MQTT-3.3.1-6]
+  assert len(callback.messages) == 0 
   aclient.disconnect()
 
 def test_retain_handling():
