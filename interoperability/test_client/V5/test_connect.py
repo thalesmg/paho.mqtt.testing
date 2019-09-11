@@ -327,7 +327,7 @@ def test_redelivery_on_reconnect():
 @pytest.mark.skip(strict=True, reason='server not supported')
 def test_maximum_packet_size():
   # [MQTT-3.1.2-24]
-  maximumPacketSize = 16 # max packet size we want to receive
+  maximumPacketSize = 256 # max packet size we want to receive
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
   connect_properties.MaximumPacketSize = maximumPacketSize
   connack = aclient.connect(host=host, port=port, cleanstart=True,

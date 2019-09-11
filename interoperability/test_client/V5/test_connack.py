@@ -81,13 +81,10 @@ def test_maximum_packet_size():
   # [MQTT-3.2.2-15]
   # 1. server max packet size
   connack = aclient.connect(host=host, port=port, cleanstart=True)
-  serverMaximumPacketSize = 2**28-1
-  if hasattr(connack.properties, "MaximumPacketSize"):
-    serverMaximumPacketSize = connack.properties.MaximumPacketSize + 1
-
-  payload = b"."*serverMaximumPacketSize
+  assert hasattr(connack.properties, "MaximumPacketSize")
+  payload = b"."*int(connack.properties.MaximumPacketSize + 1)
   aclient.publish(topics[0], payload, 0)
   # should get back a disconnect with packet size too big
   waitfor(callback.disconnects, 1, 3)
   assert len(callback.disconnects) == 1
-  assert str(callback.disconnects[0]["reasonCode"]) == "Packet too large"
+  assert callback.disconnects[0]["reasonCode"].value == 149
