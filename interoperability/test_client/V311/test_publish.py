@@ -24,7 +24,7 @@ class TestPublish():
         self.topics = [topic_prefix + topic for topic in ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA"]]
         self.wildtopics = [topic_prefix + topic for topic in ["TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#"]]
 
-    # Set retry_interval = 2s in emqx.conf
+    # Set zone.external.retry_interval = 2s in emqx.conf
     def test_dup(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)

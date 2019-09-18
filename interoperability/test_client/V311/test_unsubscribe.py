@@ -53,7 +53,7 @@ class TestUnsubscribe():
         callback.clear()
 
         # [MQTT-3.10.4-3]
-        # Set retry_interval = 2s in emqx.conf
+        # Set zone.external.retry_interval = 2s in emqx.conf
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
         client.connect(host=host, port=port, cleansession=True)

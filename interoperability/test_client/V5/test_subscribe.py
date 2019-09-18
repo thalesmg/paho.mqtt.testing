@@ -51,8 +51,11 @@ def test_subscribe_options():
 
   aclient.disconnect()
   assert len(callback.messages) == 2
-  assert callback.messages[0][3] == False
-  assert callback.messages[1][3] == True
+  for message in callback.messages:
+    if message[1] == b'retain as published false':
+      assert message[3] == False
+    if message[1] == b'retain as published true':
+      assert message[3] == True
 
   callback.clear()
   # retainHandling

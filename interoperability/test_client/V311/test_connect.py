@@ -56,6 +56,7 @@ class TestConnect():
         # assert connack.returnCode == 1
 
     # [MQTT-3.1.2-2] Unacceptable protocol level
+    @pytest.mark.skip(strict=True, reason='Emqx defaults to V5 error handling when protocol version error occurs')
     def test_proto_level(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)

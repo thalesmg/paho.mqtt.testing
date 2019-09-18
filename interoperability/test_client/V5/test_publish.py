@@ -7,7 +7,7 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
   
-@pytest.mark.skip(strict=True, reason='server not supported')
+# @pytest.mark.skip(strict=True, reason='server not supported')
 def test_qos():
   #[MQTT-3.3.1-4]
   aclient.connect(host=host, port=port)
@@ -18,7 +18,7 @@ def test_qos():
   
   waitfor(callback.disconnects, 1, 3)
   assert len(callback.disconnects) == 1
-  assert callback.disconnects[0]["reasonCode"].value == 129
+  assert callback.disconnects[0]["reasonCode"].value == 130
 
 def test_retained_message():
   callback.clear()
@@ -107,7 +107,6 @@ def test_retain_handling():
   assert len(callback.publisheds) == 1
   aclient.disconnect()
   
-# @pytest.mark.skip(strict=True, reason='unconfirmed'
 def test_topic():
   # [MQTT-3.3.2-1]
   # with pytest.raises(Exception):
@@ -119,7 +118,7 @@ def test_topic():
   aclient.publish(wildtopics[0], b"test topic", 1)
   waitfor(callback.disconnects, 1, 3)
   assert len(callback.disconnects) == 1
-  assert callback.disconnects[0]["reasonCode"].value == 143
+  assert callback.disconnects[0]["reasonCode"].value == 144
 
   # [MQTT-3.3.2-3]
   aclient.connect(host=host, port=port, cleanstart=True)
@@ -175,7 +174,6 @@ def test_message_expiry_interval():
   cleanRetained(host, port)
 
 # set mqtt.max_topic_alias = 10 in emqx.conf
-@pytest.mark.skip(strict=True, reason='server not supported')
 def test_client_topic_alias():
   # no server side topic aliases allowed
   # [MQTT-3.3.2-8]
@@ -222,7 +220,6 @@ def test_client_topic_alias():
   assert len(callback.messages) == 2
   aclient.disconnect() # should get rid of the topic aliases but not subscriptions
 
-# @pytest.mark.skip(strict=True, reason='unconfirmed'
 def test_response_topic():
   publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
   # [MQTT-3.3.2-13]
@@ -275,9 +272,8 @@ def test_user_properties():
   aclient.publish(topics[0], b"", 1, retained=False, properties=publish_properties)
   waitfor(callback.messages, 1, 3)
   aclient.disconnect()
-  assert callback.messages[0][5].UserProperty == [("c", "3"), ("a", "2")]
+  assert callback.messages[0][5].UserProperty == [("c", "3"), ("a", "2")] or callback.messages[0][5].UserProperty == [("a", "2"), ("c", "3")]
 
-# @pytest.mark.skip(strict=True, reason='unconfirmed'
 def test_content_type():
   publish_properties = MQTTV5.Properties(MQTTV5.PacketTypes.PUBLISH)
   # [MQTT-3.3.2-19]
