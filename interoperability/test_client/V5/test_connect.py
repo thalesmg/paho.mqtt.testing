@@ -394,7 +394,7 @@ def test_will_delay():
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)]) # subscribe to will message topic
   waitfor(callback2.subscribeds, 1, 3)
-  aclient.disconnect(reasonCode="Unspecified error")
+  aclient.terminate()
   connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties,
         willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
   assert connack.sessionPresent == True
@@ -404,46 +404,46 @@ def test_will_delay():
   aclient.disconnect()
   bclient.disconnect()
 
-  # # if session expiry is less than will delay then session expiry is used
-  # connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties,
-  #       willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
-  # assert connack.sessionPresent == False
+  # if session expiry is less than will delay then session expiry is used
+  connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties,
+        willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
+  assert connack.sessionPresent == False
 
-  # bclient.connect(host=host, port=port, cleanstart=True)
-  # bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)]) # subscribe to will message topic
-  # waitfor(callback2.subscribeds, 1, 3)
+  bclient.connect(host=host, port=port, cleanstart=True)
+  bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)]) # subscribe to will message topic
+  waitfor(callback2.subscribeds, 1, 3)
 
-  # aclient.terminate()
-  # time.sleep(will_properties.WillDelayInterval)
-  # connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties,
-  #     willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
-  # assert connack.sessionPresent == True
+  aclient.terminate()
+  time.sleep(will_properties.WillDelayInterval)
+  connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties,
+      willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
+  assert connack.sessionPresent == True
 
-  # waitfor(callback2.messages, 1, will_properties.WillDelayInterval)
-  # bclient.disconnect()
-  # assert callback2.messages[0][0] == topics[0]
-  # assert callback2.messages[0][1] == b"test_will_delay will message"
+  waitfor(callback2.messages, 1, will_properties.WillDelayInterval)
+  bclient.disconnect()
+  assert callback2.messages[0][0] == topics[0]
+  assert callback2.messages[0][1] == b"test_will_delay will message"
 
-  # aclient.disconnect()
-  # bclient.disconnect()
+  aclient.disconnect()
+  bclient.disconnect()
 
-  # # if session expiry is less than will delay then session expiry is used
-  # will_properties.WillDelayInterval = 5 # in seconds
-  # connect_properties.SessionExpiryInterval = 3
-  # callback.clear()
-  # callback2.clear()
-  # connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties,
-  #       willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
-  # assert connack.sessionPresent == False
+  # if session expiry is less than will delay then session expiry is used
+  will_properties.WillDelayInterval = 5 # in seconds
+  connect_properties.SessionExpiryInterval = 3
+  callback.clear()
+  callback2.clear()
+  connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties,
+        willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
+  assert connack.sessionPresent == False
 
-  # bclient.connect(host=host, port=port, cleanstart=True)
-  # bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)]) # subscribe to will message topic
-  # waitfor(callback2.subscribeds, 1, 3)
-  # aclient.terminate()
-  # waitfor(callback2.messages, 1, connect_properties.SessionExpiryInterval)
-  # bclient.disconnect()
-  # assert callback2.messages[0][0] == topics[0]
-  # assert callback2.messages[0][1] == b"test_will_delay will message"
+  bclient.connect(host=host, port=port, cleanstart=True)
+  bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)]) # subscribe to will message topic
+  waitfor(callback2.subscribeds, 1, 3)
+  aclient.terminate()
+  waitfor(callback2.messages, 1, connect_properties.SessionExpiryInterval)
+  bclient.disconnect()
+  assert callback2.messages[0][0] == topics[0]
+  assert callback2.messages[0][1] == b"test_will_delay will message"
 
 @pytest.mark.skip(strict=True, reason='server not supported')
 def test_will_topic():
