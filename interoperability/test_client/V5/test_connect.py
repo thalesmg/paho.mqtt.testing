@@ -92,17 +92,15 @@ def test_will_message():
   callback.clear()
   callback2.clear()
   aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
-    willTopic=topics[2], willMessage=b"will message", keepalive=2,
+    willTopic=topics[2], willMessage=b"will message", 
     willProperties=will_properties)
-  aclient.disconnect()
   bclient.connect(host=host, port=port, cleanstart=False)
   bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback2.subscribeds, 1, 3)
-  # keep alive timeout ought to be triggered so the will message is received
-  waitfor(callback2.messages, 1, 10)
+  aclient.disconnect()
+  waitfor(callback2.messages, 1, 3)
   bclient.disconnect()
   assert len(callback2.messages) == 0
-  cleanRetained(host, port)
  
 def test_will_qos():
   # [MQTT-3.1.2-11]
