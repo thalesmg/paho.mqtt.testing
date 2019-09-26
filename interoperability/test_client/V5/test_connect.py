@@ -380,8 +380,8 @@ def test_will_delay():
   will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
 
-  will_properties.WillDelayInterval = 6 # in seconds
-  connect_properties.SessionExpiryInterval = 10
+  will_properties.WillDelayInterval = 3 # in seconds
+  connect_properties.SessionExpiryInterval = 5
   
   # [MQTT-3.1.3-9]
   callback.clear()

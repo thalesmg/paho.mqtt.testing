@@ -7,49 +7,6 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
 
-@pytest.mark.skip(strict=True, reason='server not supported')
-def test_reason_string():
-  # [MQTT-3.9.2-1]
-  connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
-  connect_properties.MaximumPacketSize = 128
-  aclient.connect(host=host, port=port, properties=connect_properties)
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-  waitfor(callback.subscribeds, 1, 3)
-  aclient.disconnect()
-  assert callback.subscribeds[0][2].ReasonString
-
-  connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
-  connect_properties.MaximumPacketSize = 64
-  aclient.connect(host=host, port=port, properties=connect_properties)
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-  waitfor(callback.subscribeds, 1, 3)
-  aclient.disconnect()
-  assert not callback.subscribeds[0][2].ReasonString
-
-@pytest.mark.skip(strict=True, reason='server not supported')
-def test_user_properties():
-  # [MQTT-3.9.2-2]
-  connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
-  connect_properties.MaximumPacketSize = 128
-  aclient.connect(host=host, port=port, properties=connect_properties)
-  
-  sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
-  for i in range(int(connect_properties.MaximumPacketSize / 2)):
-    sub_properties.UserProperty = ("a"+str(i),str(i))
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
-  waitfor(callback.subscribeds, 1, 3)
-  aclient.disconnect()
-  assert callback.subscribeds[0][2].UserProperty
-
-  aclient.connect(host=host, port=port, properties=connect_properties)
-  sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
-  for i in range(connect_properties.MaximumPacketSize * 2):
-    sub_properties.UserProperty = ("a",str(i))
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
-  waitfor(callback.subscribeds, 1, 3)
-  aclient.disconnect
-  assert not callback.subscribeds[0][2].UserProperty
-
 def test_reason_code():
   # [MQTT-3.9.3-1] [MQTT-3.9.3-2]
   aclient.connect(host=host, port=port)
