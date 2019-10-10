@@ -7,6 +7,7 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
 
+@pytest.mark.skip(strict=True, reason='this is a bug')
 def test_subscribe():
   # [MQTT-3.8.3-1]
   # with pytest.raises(Exception):
@@ -14,10 +15,10 @@ def test_subscribe():
   #   aclient.subscribe(["订阅主题".encode("gbk")], [MQTTV5.SubscribeOptions(2)])
   
   # [MQTT-3.8.3-2]
-    aclient.connect(host=host, port=port, cleanstart=True)
-    aclient.subscribe([], [MQTTV5.SubscribeOptions(2)])
-    waitfor(callback.disconnects, 1, 2)
-    assert callback.disconnects[0]["reasonCode"].value == 143
+  aclient.connect(host=host, port=port, cleanstart=True)
+  aclient.subscribe([], [MQTTV5.SubscribeOptions(2)])
+  waitfor(callback.disconnects, 1, 2)
+  assert callback.disconnects[0]["reasonCode"].value == 130
   
 def test_subscribe_options():
   # [MQTT-3.8.3-3]
@@ -42,22 +43,39 @@ def test_subscribe_options():
   callback2.clear()
 
   # retainAsPublished
+  pubclient = mqtt_client.Client("pubclient".encode("utf-8"))
+  pubclient.connect(host=host, port=port, cleanstart=True)
+
+  pubclient.publish(topics[1], b"This is a server reserved message", 1, retained=True)
+  pubclient.publish(topics[3], b"This is another server reserved message", 1, retained=True)
+
   aclient.connect(host=host, port=port, cleanstart=True)
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2, retainAsPublished=True)])
-  waitfor(callback.subscribeds, 1, 3)
-  aclient.publish(topics[0], b"retain as published false", 1, retained=False)
-  aclient.publish(topics[0], b"retain as published true", 1, retained=True)
+  bclient.connect(host=host, port=port, cleanstart=True)
+  aclient.subscribe([wildtopics[0]], [MQTTV5.SubscribeOptions(2, retainAsPublished=True)])
+  bclient.subscribe([wildtopics[0]], [MQTTV5.SubscribeOptions(2, retainAsPublished=False)])
   waitfor(callback.messages, 2, 3)
+  waitfor(callback2.messages, 2, 3)
+
+  assert callback.messages[0][3] == True
+  assert callback.messages[1][3] == True
+  assert callback2.messages[0][3] == True
+  assert callback2.messages[1][3] == True
+  callback.clear()
+  callback2.clear()
+
+  pubclient.publish(topics[1], b"retained true", 1, retained=True)
+
+  waitfor(callback.messages, 1, 3)
+  waitfor(callback2.messages, 1, 3)
+  assert callback.messages[0][3] == True
+  assert callback2.messages[0][3] == False
 
   aclient.disconnect()
-  assert len(callback.messages) == 2
-  for message in callback.messages:
-    if message[1] == b'retain as published false':
-      assert message[3] == False
-    if message[1] == b'retain as published true':
-      assert message[3] == True
-
+  bclient.disconnect()
   callback.clear()
+  callback2.clear()
+  cleanRetained(host, port)
+
   # retainHandling
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.publish(topics[1], b"qos 0", 0, retained=True)

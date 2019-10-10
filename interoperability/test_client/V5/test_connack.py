@@ -77,7 +77,6 @@ def test_assigned_cliend_id():
   assert hasattr(connack.properties, "AssignedClientIdentifier") and connack.properties.AssignedClientIdentifier != ''
   client.disconnect()
 
-@pytest.mark.skip("This is a bug")
 def test_maximum_packet_size():
   # [MQTT-3.2.2-15]
   # 1. server max packet size
@@ -89,3 +88,9 @@ def test_maximum_packet_size():
   waitfor(callback.disconnects, 1, 3)
   assert len(callback.disconnects) == 1
   assert callback.disconnects[0]["reasonCode"].value == 149
+
+def test_receive_maximum():
+  connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
+  connect_properties.ReceiveMaximum=0
+  connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties)
+  assert connack.reasonCode.value == 130

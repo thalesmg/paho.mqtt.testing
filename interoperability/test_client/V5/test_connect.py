@@ -8,6 +8,28 @@ def __setUp(pytestconfig):
   port = int(pytestconfig.getoption('port'))
   cleanup(host, port)
 
+## Used to form a packet that does not meet the requirements of the protocol.
+def pack(connect):
+    connectFlags = bytes([(connect.CleanStart << 1) | (connect.WillFlag << 2) | \
+                       (connect.WillQoS << 3) | (connect.WillRETAIN << 5) | \
+                       (connect.usernameFlag << 6) | (connect.passwordFlag << 7)])
+    buffer = MQTTV5.writeUTF(connect.ProtocolName) + bytes([connect.ProtocolVersion]) + \
+              connectFlags + MQTTV5.writeInt16(connect.KeepAliveTimer)
+    buffer += connect.properties.pack()
+    buffer += MQTTV5.writeUTF(connect.ClientIdentifier)
+    assert connect.WillProperties.packetType == MQTTV5.PacketTypes.WILLMESSAGE
+    buffer += connect.WillProperties.pack()
+    if connect.WillTopic:
+      buffer += MQTTV5.writeUTF(connect.WillTopic)
+    if connect.WillMessage:
+      buffer += MQTTV5.writeBytes(connect.WillMessage)
+    if connect.username:
+      buffer += MQTTV5.writeUTF(connect.username)
+    if connect.password:
+      buffer += MQTTV5.writeBytes(connect.password)
+    buffer = connect.fh.pack(len(buffer)) + buffer
+    return buffer
+
 def test_basic():
   aclient.connect(host=host, port=port)
   aclient.disconnect()
@@ -23,6 +45,7 @@ def test_basic():
   assert len(callback.messages) == 3
   aclient.disconnect()
 
+@pytest.mark.skip(reason='This is a bug') ## Reason code error
 def test_protocol():
   with pytest.raises(Exception):
     aclient.connect(host=host, port=port)
@@ -30,20 +53,20 @@ def test_protocol():
 
   # [MQTT-3.1.2-1]
   connack = aclient.connect(host=host, port=port, protocolName="hj")
-  assert connack.reasonCode.value == 132
+  assert connack.reasonCode.value == 130
 
   ## server not supported
   ## [MQTT-3.1.2-2]
-  # connect = MQTTV5.Connects()
-  # connect.ProtocolName = "MQTT"
-  # connect.ProtocolVersion = 6
-  # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  # sock.settimeout(.5)
-  # sock.connect((host, port))
-  # mqtt_client.main.sendtosocket(sock, connect.pack())
-  # response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
-  # assert response.fh.PacketType == MQTTV5.PacketTypes.CONNACK
-  # assert response.reasonCode.value == 129
+  connect = MQTTV5.Connects()
+  connect.ProtocolName = "MQTT"
+  connect.ProtocolVersion = 6
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sock.settimeout(.5)
+  sock.connect((host, port))
+  mqtt_client.main.sendtosocket(sock, pack(connect))
+  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  assert response.fh.PacketType == MQTTV5.PacketTypes.CONNACK
+  assert response.reasonCode.value == 130
 
 def test_clean_start():
   # [MQTT-3.1.2-4]
@@ -104,22 +127,31 @@ def test_will_message():
   assert len(callback2.messages) == 0
  
 def test_will_qos():
-  # [MQTT-3.1.2-11]
-  # with pytest.raises(Exception):
-  #   connect = MQTTV5.Connects()
-  #   connect.ClientIdentifier = "testWillQos"
-  #   connect.CleanStart = True
-  #   connect.KeepAliveTimer = 0
-  #   connect.WillFlag = False
-  #   connect.WillTopic = topics[2]
-  #   connect.WillMessage = "testWillQos"
-  #   connect.WillQoS = 2
-  #   connect.WillRETAIN = 0
-  #   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  #   sock.settimeout(.5)
-  #   sock.connect((host, port))
-  #   mqtt_client.main.sendtosocket(sock, connect.pack())
-  #   MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  ## this is a bug
+  ## When the will is identified as 0, the will QoS must be 0, otherwise it is considered a protocol error (not explicitly defined in the protocol)
+  # # [MQTT-3.1.2-11]
+  # connect = MQTTV5.Connects()
+  # connect.ClientIdentifier = "testWillQos"
+  # connect.CleanStart = True
+  # connect.KeepAliveTimer = 0
+  # connect.WillFlag = False
+  # connect.WillTopic = topics[2]
+  # connect.WillMessage = b"testWillQos"
+  # connect.WillQoS = 2
+  # connect.WillRETAIN = 0
+  # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  # sock.settimeout(.5)
+  # sock.connect((host, port))
+  # mqtt_client.main.sendtosocket(sock, pack(connect))
+  # response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  # assert response.fh.PacketType == MQTTV5.PacketTypes.CONNECT
+  # assert response.reasonCode.value == 130
+  
+  ## this is a bug
+  ## When the will ID is 1, the value of the will QoS can be 0, 1, 2, and setting it to 3 will cause a protocol error (defined as invalid in the protocol) (not implemented)
+  # connack = aclient.connect(host=host, port=port, cleanstart=True, willFlag=True, willQoS=3,
+  #     willTopic=topics[2], willMessage=b"will message")
+  # assert connack.reasonCode.value == 130
 
   # [MQTT-3.1.2-12]
   will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
@@ -141,22 +173,25 @@ def test_will_qos():
   cleanRetained(host, port)
 
 def test_will_retain():
+  ## this is a bug
+  ## When the will ID is 0, the will retention identifier must be 0, otherwise it is considered a protocol error (not explicitly defined in the protocol)
   # [MQTT-3.1.2-13]
-  # with pytest.raises(Exception):
-  #   connect = MQTTV5.Connects()
-  #   connect.ClientIdentifier = "testWillRetain"
-  #   connect.CleanStart = True
-  #   connect.KeepAliveTimer = 0
-  #   connect.WillFlag = False
-  #   connect.WillTopic = topics[2]
-  #   connect.WillMessage = "testWillRetain"
-  #   connect.WillQoS = 0
-  #   connect.WillRETAIN = 1
-  #   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  #   sock.settimeout(.5)
-  #   sock.connect((host, port))
-  #   mqtt_client.main.sendtosocket(sock, connect.pack())
-  #   MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  # connect = MQTTV5.Connects()
+  # connect.ClientIdentifier = "testWillRetain"
+  # connect.CleanStart = True
+  # connect.KeepAliveTimer = 0
+  # connect.WillFlag = False
+  # connect.WillTopic = topics[2]
+  # connect.WillMessage = b"testWillRetain"
+  # connect.WillQoS = 0
+  # connect.WillRETAIN = 1
+  # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  # sock.settimeout(.5)
+  # sock.connect((host, port))
+  # mqtt_client.main.sendtosocket(sock, pack(connect))
+  # response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  # assert response.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT
+  # assert response.reasonCode.value == 130
 
   # [MQTT-3.1.2-14]
   will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
@@ -197,62 +232,68 @@ def test_will_retain():
 @pytest.mark.skip(strict=True, reason='This is a bug')
 def test_username_flag():
   # [MQTT-3.1.2-16]
-  with pytest.raises(Exception):
-    connect = MQTTV5.Connects()
-    connect.ClientIdentifier = "testUsernameFlag"
-    connect.CleanStart = True
-    connect.KeepAliveTimer = 0
-    connect.usernameFlag = False
-    connect.username = "testUsernameFlag"
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(.5)
-    sock.connect((host, port))
-    mqtt_client.main.sendtosocket(sock, connect.pack())
-    MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  connect = MQTTV5.Connects()
+  connect.ClientIdentifier = "testUsernameFlag"
+  connect.CleanStart = True
+  connect.KeepAliveTimer = 0
+  connect.usernameFlag = False
+  connect.username = "testUsernameFlag"
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sock.settimeout(.5)
+  sock.connect((host, port))
+  mqtt_client.main.sendtosocket(sock, pack(connect))
+  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  assert response.fh.PacketType == MQTTV5.PacketTypes.CONNACK
+  assert response.reasonCode.value == 130
+
   
   # [MQTT-3.1.2-17]
-  with pytest.raises(Exception):
-    connect = MQTTV5.Connects()
-    connect.ClientIdentifier = "testUsernameFlag"
-    connect.CleanStart = True
-    connect.KeepAliveTimer = 0
-    connect.usernameFlag = True
-    connect.username = None
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(.5)
-    sock.connect((host, port))
-    mqtt_client.main.sendtosocket(sock, connect.pack())
-    MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  connect = MQTTV5.Connects()
+  connect.ClientIdentifier = "testUsernameFlag"
+  connect.CleanStart = True
+  connect.KeepAliveTimer = 0
+  connect.usernameFlag = True
+  connect.username = None
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sock.settimeout(.5)
+  sock.connect((host, port))
+  mqtt_client.main.sendtosocket(sock, pack(connect))
+  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  assert response.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT
+  assert response.reasonCode.value == 130
+
 
 @pytest.mark.skip(strict=True, reason='This is a bug')
 def test_password_flag():
   # [MQTT-3.1.2-18]
-  with pytest.raises(Exception):
-    connect = MQTTV5.Connects()
-    connect.ClientIdentifier = "testPasswordFlag"
-    connect.CleanStart = True
-    connect.KeepAliveTimer = 0
-    connect.passwordFlag = False
-    connect.password = "testPasswordFlag"
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(.5)
-    sock.connect((host, port))
-    mqtt_client.main.sendtosocket(sock, connect.pack())
-    MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  connect = MQTTV5.Connects()
+  connect.ClientIdentifier = "testPasswordFlag"
+  connect.CleanStart = True
+  connect.KeepAliveTimer = 0
+  connect.passwordFlag = False
+  connect.password = b"testPasswordFlag"
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sock.settimeout(.5)
+  sock.connect((host, port))
+  mqtt_client.main.sendtosocket(sock, pack(connect))
+  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  assert response.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT
+  assert response.reasonCode.value == 130
   
   # [MQTT-3.1.2-19]
-  with pytest.raises(Exception):
-    connect = MQTTV5.Connects()
-    connect.ClientIdentifier = "testPasswordFlag"
-    connect.CleanStart = True
-    connect.KeepAliveTimer = 0
-    connect.passwordFlag = True
-    connect.password = None
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(.5)
-    sock.connect((host, port))
-    mqtt_client.main.sendtosocket(sock, connect.pack())
-    MQTTV5.unpackPacket(MQTTV5.getPacket(sock))  
+  connect = MQTTV5.Connects()
+  connect.ClientIdentifier = "testPasswordFlag"
+  connect.CleanStart = True
+  connect.KeepAliveTimer = 0
+  connect.passwordFlag = True
+  connect.password = None
+  sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  sock.settimeout(.5)
+  sock.connect((host, port))
+  mqtt_client.main.sendtosocket(sock, pack(connect))
+  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
+  assert response.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT
+  assert response.reasonCode.value == 130
 
 def test_keepalive():
   # keepalive processing.  We should be kicked off by the server if we don't send or receive any data, and don't send any pings either.

@@ -7,7 +7,6 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
   
-# @pytest.mark.skip(strict=True, reason='server not supported')
 def test_qos():
   #[MQTT-3.3.1-4]
   aclient.connect(host=host, port=port)
@@ -16,6 +15,17 @@ def test_qos():
   publish.fh.QoS = 3
   mqtt_client.main.sendtosocket(aclient.sock, publish.pack())
   
+  waitfor(callback.disconnects, 1, 3)
+  assert len(callback.disconnects) == 1
+  assert callback.disconnects[0]["reasonCode"].value == 130
+
+def test_dup():
+  aclient.connect(host=host, port=port)
+  publish = MQTTV5.Publishes()
+  publish.fh.QoS = 0
+  publish.fh.DUP = 1
+  mqtt_client.main.sendtosocket(aclient.sock, publish.pack())
+
   waitfor(callback.disconnects, 1, 3)
   assert len(callback.disconnects) == 1
   assert callback.disconnects[0]["reasonCode"].value == 130
@@ -184,6 +194,7 @@ def test_client_topic_alias():
   # should get back a disconnect with Topic alias invalid
   waitfor(callback.disconnects, 1, 2)
   assert len(callback.disconnects) == 1
+  assert callback.disconnects[0]["reasonCode"].value == 148
 
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
   connect_properties.TopicAliasMaximum = 0 # server topic aliases not allowed
@@ -202,6 +213,7 @@ def test_client_topic_alias():
   aclient.publish(topics[0], b"Greater than Topic Alias Maximum", 1, properties=publish_properties)
   waitfor(callback.disconnects, 1, 2)
   assert len(callback.disconnects) == 1
+  assert callback.disconnects[0]["reasonCode"].value == 148
 
   callback.clear()
   connack = aclient.connect(host=host, port=port, cleanstart=True,
