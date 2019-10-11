@@ -68,9 +68,10 @@ def __setUp(pytestconfig):
   cleanRetained(host, port)
 
 @pytest.fixture(scope="function", autouse=True)
-def callbackClear():
+def callbackClear(pytestconfig):
   callback.clear()
   callback2.clear()
+  cleanup(pytestconfig.getoption('host'), int(pytestconfig.getoption('port')))
 
 def cleanup(host, port):
     print("clean up starting")

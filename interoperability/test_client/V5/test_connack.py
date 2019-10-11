@@ -77,6 +77,7 @@ def test_assigned_cliend_id():
   assert hasattr(connack.properties, "AssignedClientIdentifier") and connack.properties.AssignedClientIdentifier != ''
   client.disconnect()
 
+@pytest.mark.skip(reason='This is a bug') ## Reason code error
 def test_maximum_packet_size():
   # [MQTT-3.2.2-15]
   # 1. server max packet size

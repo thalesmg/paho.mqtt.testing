@@ -75,6 +75,7 @@ def test_retain():
 def test_qos():
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([shared_sub_topic], [MQTTV5.SubscribeOptions(2)]) 
+  waitfor(callback.subscribeds, 1, 3)
 
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.publish(shared_pub_topic, b"test_shared_subscriptions_qos", 2)
@@ -88,6 +89,8 @@ def test_qos():
 
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([shared_sub_topic], [MQTTV5.SubscribeOptions(1)]) 
+  waitfor(callback.subscribeds, 1, 3)
+
   bclient.publish(shared_pub_topic, b"test_shared_subscriptions_qos", 2)
 
   waitfor(callback.messages, 1, 3)
@@ -134,10 +137,10 @@ def test_client_terminates_when_qos_eq_1():
 
   waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 1
-  assert callback.messages[0][1] == b'test_shared_subscriptions_client_terminates_when_qos_eq_2'
+  assert callback.messages[0][1] == b'test_shared_subscriptions_client_terminates_when_qos_eq_1'
 
 def test_client_terminates_when_qos_eq_2():
-  ##   If the Server is in the process of sending a QoS 2 message to its chosen subscribing Client and the connection to the Client breaks before delivery is complete, the Server MUST complete the delivery of the message to that Client when it reconnects [MQTT-4.8.2-4] as described in section 4.3.3. If the Client's Session terminates before the Client reconnects, the Server MUST NOT send the Application Message to any other subscribed Client [MQTT-4.8.2-5].
+  ##  If the Server is in the process of sending a QoS 2 message to its chosen subscribing Client and the connection to the Client breaks before delivery is complete, the Server MUST complete the delivery of the message to that Client when it reconnects [MQTT-4.8.2-4] as described in section 4.3.3. If the Client's Session terminates before the Client reconnects, the Server MUST NOT send the Application Message to any other subscribed Client [MQTT-4.8.2-5].
   pubclient = mqtt_client.Client("pubclient".encode("utf-8"))
   pubclient.connect(host=host, port=port, cleanstart=True)
 
