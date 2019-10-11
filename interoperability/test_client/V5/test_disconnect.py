@@ -7,7 +7,6 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
 
-@pytest.mark.skip(strict=True, reason='server not supported')
 def test_reason_code():
   # [MQTT-3.14.2-1]
   aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
@@ -19,9 +18,9 @@ def test_reason_code():
 
   aclient.disconnect(reasonCode="Disconnect with will message")
   waitfor(callback2.messages, 1, 3)
-  bclient.disconnect()
   assert len(callback2.messages) == 1
   assert callback2.messages[0][1] == b"will message"
+  bclient.disconnect()
 
 def test_session_expiry_interval():
   # [MQTT-3.14.2-2]

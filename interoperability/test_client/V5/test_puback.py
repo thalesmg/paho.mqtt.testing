@@ -13,3 +13,4 @@ def test_reason_code():
   aclient.publish(topics[0], b'test_reason_code', 1)
   waitfor(callback.publisheds, 1, 3)
   assert not callback.publisheds[0][1].value == None
+  aclient.disconnect()

@@ -549,9 +549,7 @@ def test_connect_actions():
   # assert len(callback2.messages) == 1 
   # assert callback2.messages[0][0] == topics[0]
   # assert callback2.messages[0][1] == b"test_connect_actions"
-
-  # [MQTT-3.1.4-6]
-  aclient.connect(host=host, port=port, protocolName="hj")
-  aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-  waitfor(callback.subscribeds, 1, 3)
-  assert len(callback.subscribeds) == 0 
+  new_client.disconnect()
+  aclient.disconnect()
+  bclient.disconnect()
+  
