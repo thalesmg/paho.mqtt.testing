@@ -45,15 +45,12 @@ class TestConnect():
         assert e.value.args[0] == 'connect failed - socket closed, no connack'
 
     # [MQTT-3.1.2-1] Incorrect protocol name
-    @pytest.mark.skip(reason='unconfirmed')
     def test_proto_name(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
         with pytest.raises(Exception) as e:
             client.connect(host=host, port=port, protocolName="bad_name")
-        assert e.value.args[0] == 'connect failed - socket closed, no connack'
-        # connack = client.connect(host=host, port=port, protocolName="bad_name")
-        # assert connack.returnCode == 1
+        assert e.value.args[0] == 'connect was Connacks(DUP=False, QoS=0, Retain=False, Session present=False, ReturnCode=1)'
 
     # [MQTT-3.1.2-2] Unacceptable protocol level
     @pytest.mark.skip(strict=True, reason='Emqx defaults to V5 error handling when protocol version error occurs')

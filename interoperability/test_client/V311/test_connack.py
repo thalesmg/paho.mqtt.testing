@@ -32,7 +32,6 @@ class TestConnack():
         connack = client.connect(host=host, port=port, cleansession=False)
         assert connack.flags == 0x01
 
-    @pytest.mark.skip(strict=True, reason='server not supported')
     def test_return_code(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)

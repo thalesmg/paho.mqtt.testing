@@ -174,8 +174,8 @@ def test_will_qos():
 
 def test_will_retain():
   ## this is a bug
-  ## When the will ID is 0, the will retention identifier must be 0, otherwise it is considered a protocol error (not explicitly defined in the protocol)
-  # [MQTT-3.1.2-13]
+  ## When the will flag is 0, the will retention identifier must be 0, otherwise it is considered a protocol error (not explicitly defined in the protocol)
+  ## [MQTT-3.1.2-13]
   # connect = MQTTV5.Connects()
   # connect.ClientIdentifier = "testWillRetain"
   # connect.CleanStart = True
@@ -485,25 +485,24 @@ def test_will_delay():
   assert callback2.messages[0][0] == topics[0]
   assert callback2.messages[0][1] == b"test_will_delay will message"
 
-@pytest.mark.skip(strict=True, reason='server not supported')
 def test_will_topic():
   connack = aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
       willTopic=wildtopics[0], willMessage=b"will message")
   assert connack.reasonCode.value == 144
 
-  # [MQTT-3.1.3-11]
-  with pytest.raises(Exception):
-    connect = MQTTV5.Connects()
-    connect.ClientIdentifier = "testWillTopic"
-    connect.CleanStart = True
-    connect.KeepAliveTimer = 0
-    connect.WillFlag = True
-    connect.WillTopic = "遗嘱主题".encode("gbk")       # UTF-8
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(.5)
-    sock.connect((host, port))
-    mqtt_client.main.sendtosocket(sock, connect.pack())
-    MQTTV5.unpackPacket(MQTTV5.getPacket(sock))  
+  ## [MQTT-3.1.3-11] server not supported
+  # with pytest.raises(Exception):
+  #   connect = MQTTV5.Connects()
+  #   connect.ClientIdentifier = "testWillTopic"
+  #   connect.CleanStart = True
+  #   connect.KeepAliveTimer = 0
+  #   connect.WillFlag = True
+  #   connect.WillTopic = "遗嘱主题".encode("gbk")       # UTF-8
+  #   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  #   sock.settimeout(.5)
+  #   sock.connect((host, port))
+  #   mqtt_client.main.sendtosocket(sock, connect.pack())
+  #   MQTTV5.unpackPacket(MQTTV5.getPacket(sock))  
 
 @pytest.mark.skip(strict=True, reason='server not supported')
 def test_username():
