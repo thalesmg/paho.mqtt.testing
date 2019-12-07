@@ -172,7 +172,7 @@ def test_message_expiry_interval():
   waitfor(callback.messages, 4, 3)
   bclient.connect(host=host, port=port, cleanstart=False)
   bclient.subscribe(["topic/+"], [MQTTV5.SubscribeOptions(2)])
-  waitfor(callback2.messages, 2, 3)
+  waitfor(callback2.messages, 4, 3)
   bclient.disconnect()
   aclient.disconnect()
   # [MQTT-3.3.2-5] 
