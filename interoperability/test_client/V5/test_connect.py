@@ -127,7 +127,7 @@ def test_will_message():
   assert len(callback2.messages) == 0
  
 def test_will_qos():
-  ## this is a bug
+  ## This is the client content
   ## When the will is identified as 0, the will QoS must be 0, otherwise it is considered a protocol error (not explicitly defined in the protocol)
   # # [MQTT-3.1.2-11]
   # connect = MQTTV5.Connects()
@@ -147,7 +147,7 @@ def test_will_qos():
   # assert response.fh.PacketType == MQTTV5.PacketTypes.CONNECT
   # assert response.reasonCode.value == 130
   
-  ## this is a bug
+  ## This is the client content
   ## When the will ID is 1, the value of the will QoS can be 0, 1, 2, and setting it to 3 will cause a protocol error (defined as invalid in the protocol) (not implemented)
   # connack = aclient.connect(host=host, port=port, cleanstart=True, willFlag=True, willQoS=3,
   #     willTopic=topics[2], willMessage=b"will message")
@@ -173,7 +173,7 @@ def test_will_qos():
   cleanRetained(host, port)
 
 def test_will_retain():
-  ## this is a bug
+  ## This is the client content
   ## When the will flag is 0, the will retention identifier must be 0, otherwise it is considered a protocol error (not explicitly defined in the protocol)
   ## [MQTT-3.1.2-13]
   # connect = MQTTV5.Connects()
@@ -229,7 +229,7 @@ def test_will_retain():
 
   cleanRetained(host, port)
 
-@pytest.mark.skip(strict=True, reason='This is a bug')
+@pytest.mark.skip(strict=True, reason='This is the client content')
 def test_username_flag():
   # [MQTT-3.1.2-16]
   connect = MQTTV5.Connects()
@@ -263,7 +263,7 @@ def test_username_flag():
   assert response.reasonCode.value == 130
 
 
-@pytest.mark.skip(strict=True, reason='This is a bug')
+@pytest.mark.skip(strict=True, reason='This is the client content')
 def test_password_flag():
   # [MQTT-3.1.2-18]
   connect = MQTTV5.Connects()

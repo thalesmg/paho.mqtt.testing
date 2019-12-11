@@ -139,6 +139,7 @@ def test_client_terminates_when_qos_eq_1():
   assert len(callback.messages) == 1
   assert callback.messages[0][1] == b'test_shared_subscriptions_client_terminates_when_qos_eq_1'
 
+@pytest.mark.skip(reason='This is a bug')
 def test_client_terminates_when_qos_eq_2():
   ##  If the Server is in the process of sending a QoS 2 message to its chosen subscribing Client and the connection to the Client breaks before delivery is complete, the Server MUST complete the delivery of the message to that Client when it reconnects [MQTT-4.8.2-4] as described in section 4.3.3. If the Client's Session terminates before the Client reconnects, the Server MUST NOT send the Application Message to any other subscribed Client [MQTT-4.8.2-5].
   pubclient = mqtt_client.Client("pubclient".encode("utf-8"))
@@ -256,13 +257,14 @@ def test_overlapping_subscription():
   assert callback.messages[0][1] == b'test_overlapping_subscription_1'
   assert callback.messages[0][2] == 1
 
-@pytest.mark.skip(reason='This is a bug')
+@pytest.mark.skip(strict=True, reason='server not supported')
 def test_subscriptions_to_both_shared_and_non_shared():
   ## Each Shared Subscription is independent from any other. It is possible to have two Shared Subscriptions with overlapping filters. In such cases a message that matches both Shared Subscriptions will be processed separately by both of them. If a Client has a Shared Subscription and a Non‑shared Subscription and a message matches both of them, the Client will receive a copy of the message by virtue of it having the Non‑shared Subscription. A second copy of the message will be delivered to one of the subscribers to the Shared Subscription, and this could result in a second copy being sent to this Client.
   aclient.connect(host=host, port=port, cleanstart=True)
   bclient.connect(host=host, port=port, cleanstart=True)
   
   aclient.subscribe([shared_pub_topic, shared_sub_topic], [MQTTV5.SubscribeOptions(2)]*2)
+  waitfor(callback.subscribeds, 2, 3)
   bclient.publish(shared_pub_topic, b"test_overlapping_subscription_2", 1)
   waitfor(callback.messages, 2, 3)
 
