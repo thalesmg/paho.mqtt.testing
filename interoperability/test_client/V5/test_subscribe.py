@@ -7,7 +7,6 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
 
-@pytest.mark.skip(strict=True, reason='this is a bug')
 def test_subscribe():
   # [MQTT-3.8.3-1]
   # with pytest.raises(Exception):
@@ -18,7 +17,7 @@ def test_subscribe():
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.disconnects, 1, 2)
-  assert callback.disconnects[0]["reasonCode"].value == 130
+  assert callback.disconnects[0]["reasonCode"].value == 143
   
 def test_subscribe_options():
   # [MQTT-3.8.3-3]

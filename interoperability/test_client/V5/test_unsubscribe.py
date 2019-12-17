@@ -7,7 +7,6 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
 
-@pytest.mark.skip(strict=True, reason='this is a bug')
 def test_unsubscribe_payload():
   # [MQTT-3.10.3-1]
   # with pytest.raises(Exception):
@@ -19,7 +18,7 @@ def test_unsubscribe_payload():
   aclient.unsubscribe([])
   waitfor(callback.disconnects, 1, 3)
   assert len(callback.disconnects) == 1
-  assert callback.disconnects[0]["reasonCode"].value == 130
+  assert callback.disconnects[0]["reasonCode"].value == 143
 
 def test_unsubscribe_actions():
   bclient.connect(host=host, port=port, cleanstart=True)
