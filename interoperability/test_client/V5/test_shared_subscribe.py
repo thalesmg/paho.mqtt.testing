@@ -59,7 +59,6 @@ def test_shared_subscriptions():
   aclient.disconnect()
   bclient.disconnect()
 
-@pytest.mark.skip(reason='This is a bug')
 def test_retain():
   ## When a shared subscription is first subscribed, the reservation message is not sent to this session. Other matching publish messages will be sent to this session.
 
