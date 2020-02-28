@@ -439,7 +439,7 @@ def test_will_delay():
         willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
   assert connack.sessionPresent == True
   
-  waitfor(callback2.messages, 1, will_properties.WillDelayInterval)
+  waitfor(callback2.messages, 2, will_properties.WillDelayInterval)
   assert len(callback2.messages) == 0
   aclient.disconnect()
   bclient.disconnect()
@@ -459,7 +459,7 @@ def test_will_delay():
       willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
   assert connack.sessionPresent == True
 
-  waitfor(callback2.messages, 1, will_properties.WillDelayInterval)
+  waitfor(callback2.messages, 2, will_properties.WillDelayInterval)
   bclient.disconnect()
   assert callback2.messages[0][0] == topics[0]
   assert callback2.messages[0][1] == b"test_will_delay will message"
@@ -480,7 +480,7 @@ def test_will_delay():
   bclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)]) # subscribe to will message topic
   waitfor(callback2.subscribeds, 1, 3)
   aclient.terminate()
-  waitfor(callback2.messages, 1, connect_properties.SessionExpiryInterval)
+  waitfor(callback2.messages, 2, connect_properties.SessionExpiryInterval)
   bclient.disconnect()
   assert callback2.messages[0][0] == topics[0]
   assert callback2.messages[0][1] == b"test_will_delay will message"
