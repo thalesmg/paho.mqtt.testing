@@ -90,7 +90,7 @@ def test_will_message():
   will_properties.WillDelayInterval = 0 # this is the default anyway
   will_properties.UserProperty = ("a", "2")
   will_properties.UserProperty = ("c", "3")
-  
+
   # [MQTT-3.1.2-7] [MQTT-3.1.2-8]
   callback.clear()
   callback2.clear()
@@ -107,16 +107,16 @@ def test_will_message():
   assert len(callback2.messages) == 1
   assert callback2.messages[0][1] == b"will message"
   assert callback2.messages[0][5].UserProperty ==  [('c', '3'), ('a', '2')] or callback2.messages[0][5].UserProperty ==  [('a', '2'), ('c', '3')]
-  
+
   # [MQTT-3.1.2-9]
-  with pytest.raises(Exception): 
+  with pytest.raises(Exception):
     aclient.connect(host=host, port=port, cleanstart=True, willFlag=True)
 
   # [MQTT-3.1.2-10]
   callback.clear()
   callback2.clear()
   aclient.connect(host=host, port=port, cleanstart=True, willFlag=True,
-    willTopic=topics[2], willMessage=b"will message", 
+    willTopic=topics[2], willMessage=b"will message",
     willProperties=will_properties)
   bclient.connect(host=host, port=port, cleanstart=False)
   bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
@@ -125,7 +125,7 @@ def test_will_message():
   waitfor(callback2.messages, 1, 3)
   bclient.disconnect()
   assert len(callback2.messages) == 0
- 
+
 def test_will_qos():
   ## This is the client content
   ## When the will is identified as 0, the will QoS must be 0, otherwise it is considered a protocol error (not explicitly defined in the protocol)
@@ -146,7 +146,7 @@ def test_will_qos():
   # response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
   # assert response.fh.PacketType == MQTTV5.PacketTypes.CONNECT
   # assert response.reasonCode.value == 130
-  
+
   ## This is the client content
   ## When the will ID is 1, the value of the will QoS can be 0, 1, 2, and setting it to 3 will cause a protocol error (defined as invalid in the protocol) (not implemented)
   # connack = aclient.connect(host=host, port=port, cleanstart=True, willFlag=True, willQoS=3,
@@ -246,7 +246,7 @@ def test_username_flag():
   assert response.fh.PacketType == MQTTV5.PacketTypes.CONNACK
   assert response.reasonCode.value == 130
 
-  
+
   # [MQTT-3.1.2-17]
   connect = MQTTV5.Connects()
   connect.ClientIdentifier = "testUsernameFlag"
@@ -279,7 +279,7 @@ def test_password_flag():
   response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
   assert response.fh.PacketType == MQTTV5.PacketTypes.DISCONNECT
   assert response.reasonCode.value == 130
-  
+
   # [MQTT-3.1.2-19]
   connect = MQTTV5.Connects()
   connect.ClientIdentifier = "testPasswordFlag"
@@ -298,10 +298,10 @@ def test_password_flag():
 def test_keepalive():
   # keepalive processing.  We should be kicked off by the server if we don't send or receive any data, and don't send any pings either.
   keepalive = 1
-  
+
   bclient.connect(host=host, port=port, cleanstart=True, keepalive=3)
   bclient.subscribe([topics[4]], [MQTTV5.SubscribeOptions(2)])
-  
+
   connack = aclient.connect(host=host, port=port, cleanstart=True, keepalive=keepalive, willFlag=True,
         willTopic=topics[4], willQoS=1, willMessage=b"keepalive expiry")
 
@@ -398,7 +398,7 @@ def test_clientid():
     client = mqtt_client.Client(None)
     connack = client.connect(host=host, port=port)
     assert connack.properties.AssignedClientIdentifie != ""
-  
+
   # [MQTT-3.1.3-4]
   # with pytest.raises(Exception):
   #   client = mqtt_client.Client("客户端".encode('gbk'))
@@ -408,7 +408,7 @@ def test_clientid():
   client = mqtt_client.Client("这是cliend_id 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".encode("utf-8"))
   client.connect(host=host, port=port)
   client.disconnect()
-  
+
   # [MQTT-3.1.3-6] [MQTT-3.1.3-7]
   client0 = mqtt_client.Client("")
   connack = client0.connect(host=host, port=port, cleanstart=True) # should not be rejected
@@ -421,9 +421,9 @@ def test_will_delay():
   will_properties = MQTTV5.Properties(MQTTV5.PacketTypes.WILLMESSAGE)
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
 
-  will_properties.WillDelayInterval = 3 # in seconds
-  connect_properties.SessionExpiryInterval = 5
-  
+  will_properties.WillDelayInterval = 5 # in seconds
+  connect_properties.SessionExpiryInterval = 10
+
   # [MQTT-3.1.3-9]
   callback.clear()
   callback2.clear()
@@ -438,7 +438,7 @@ def test_will_delay():
   connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties,
         willProperties=will_properties, willFlag=True, willTopic=topics[0], willMessage=b"test_will_delay will message")
   assert connack.sessionPresent == True
-  
+
   waitfor(callback2.messages, 2, will_properties.WillDelayInterval)
   assert len(callback2.messages) == 0
   aclient.disconnect()
@@ -468,8 +468,8 @@ def test_will_delay():
   bclient.disconnect()
 
   # if session expiry is less than will delay then session expiry is used
-  will_properties.WillDelayInterval = 5 # in seconds
-  connect_properties.SessionExpiryInterval = 3
+  will_properties.WillDelayInterval = 10 # in seconds
+  connect_properties.SessionExpiryInterval = 5
   callback.clear()
   callback2.clear()
   connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties,
@@ -502,7 +502,7 @@ def test_will_topic():
   #   sock.settimeout(.5)
   #   sock.connect((host, port))
   #   mqtt_client.main.sendtosocket(sock, connect.pack())
-  #   MQTTV5.unpackPacket(MQTTV5.getPacket(sock))  
+  #   MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
 
 @pytest.mark.skip(strict=True, reason='server not supported')
 def test_username():
@@ -528,7 +528,7 @@ def test_username():
     sock.settimeout(.5)
     sock.connect((host, port))
     mqtt_client.main.sendtosocket(sock, buffer)
-    MQTTV5.unpackPacket(MQTTV5.getPacket(sock))  
+    MQTTV5.unpackPacket(MQTTV5.getPacket(sock))
 
 def test_connect_actions():
   aclient.connect(host=host, port=port, willFlag=True, willTopic=topics[0], willMessage=b"test_connect_actions")
@@ -545,10 +545,10 @@ def test_connect_actions():
   assert callback.disconnects[0]['reasonCode'].value == 142
   ## server not supported
   ## [MQTT-3.1.4-3]
-  # assert len(callback2.messages) == 1 
+  # assert len(callback2.messages) == 1
   # assert callback2.messages[0][0] == topics[0]
   # assert callback2.messages[0][1] == b"test_connect_actions"
   new_client.disconnect()
   aclient.disconnect()
   bclient.disconnect()
-  
+ 
