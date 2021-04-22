@@ -108,9 +108,12 @@ class TestPublish():
         assert b'' == client.sock.recv(1)
 
     def test_actions(self):
-        client = mqtt_client.Client("myclientid")
+        clientid1 = "client-test_actions-1"
+        clientid2 = "client-test_actions-2"
+        clientid3 = "client-test_actions-3"
+        client = mqtt_client.Client(clientid1)
         client.connect(host=host, port=port, cleansession=True)
-        
+
         # QoS 0
         client.publish(self.topics[0], b"qos 0", qos = 0)
         succeeded = False
@@ -140,7 +143,7 @@ class TestPublish():
         assert packet.fh.MessageType == MQTTV3.PUBCOMP
 
         callback2 = Callbacks()
-        client2 = mqtt_client.Client("myclientid2", callback2)
+        client2 = mqtt_client.Client(clientid2, callback2)
         client2.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.topics[0]], [2])
         MQTTV3.getPacket(client.sock)
@@ -162,7 +165,7 @@ class TestPublish():
 
         # [MQTT-3.3.5-1]
         callback = Callbacks()
-        client = mqtt_client.Client("myclientid", callback)
+        client = mqtt_client.Client(clientid3, callback)
         client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.wildtopics[0]], [0])
         client.subscribe([self.topics[1]], [2])
