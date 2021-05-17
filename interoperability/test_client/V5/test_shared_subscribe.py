@@ -66,6 +66,7 @@ def test_retain():
   bclient.connect(host=host, port=port, cleanstart=True)
   
   aclient.publish(shared_pub_topic, b"test_shared_subscriptions_retain", 1, retained=True)
+  time.sleep(1)
   bclient.subscribe([shared_sub_topic], [MQTTV5.SubscribeOptions(2)]) 
   waitfor(callback2.messages, 1, 3)
   assert len(callback2.messages) == 0
