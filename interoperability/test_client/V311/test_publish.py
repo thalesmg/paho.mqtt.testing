@@ -51,7 +51,7 @@ class TestPublish():
         packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client2.sock))
         packet = None
         spent = 0
-        while spent < 3:
+        while spent < 6:
             try:
                 packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client2.sock))
             except:
