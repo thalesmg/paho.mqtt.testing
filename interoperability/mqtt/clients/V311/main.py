@@ -96,14 +96,14 @@ class Client:
 
   def connect(self, host="localhost", port=1883, newsocket=True, assertReturnCode=True,
               cleansession=True, keepalive=0, protocolName="MQTT", protocolVersion=4, username=None, password=None,
-              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False):
+              willFlag=False, willTopic=None, willMessage=None, willQoS=2, willRetain=False, socket_timeout=0.5):
     if newsocket:
       try:
         self.sock.close()
       except:
         pass
       self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      self.sock.settimeout(.5)
+      self.sock.settimeout(socket_timeout)
       self.sock.connect((host, port))
 
     connect = MQTTV3.Connects()

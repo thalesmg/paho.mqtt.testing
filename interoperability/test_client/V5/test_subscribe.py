@@ -1,4 +1,4 @@
-from .test_basic import * 
+from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
 @pytest.fixture(scope="module", autouse=True)
@@ -12,16 +12,20 @@ def test_subscribe():
   # with pytest.raises(Exception):
   #   aclient.connect(host=host, port=port, cleanstart=True)
   #   aclient.subscribe(["订阅主题".encode("gbk")], [MQTTV5.SubscribeOptions(2)])
-  
+
   # [MQTT-3.8.3-2]
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.disconnects, 1, 2)
   assert callback.disconnects[0]["reasonCode"].value == 143
-  
+
+@pytest.mark.rlog_flaky
 def test_subscribe_options():
   # [MQTT-3.8.3-3]
   # noLocal
+  callback.clear()
+  callback2.clear()
+
   aclient.connect(host=host, port=port, cleanstart=True)
   bclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2, noLocal=True)])
@@ -47,13 +51,14 @@ def test_subscribe_options():
 
   pubclient.publish(topics[1], b"This is a server reserved message", 1, retained=True)
   pubclient.publish(topics[3], b"This is another server reserved message", 1, retained=True)
+  time.sleep(0.2)
 
   aclient.connect(host=host, port=port, cleanstart=True)
   bclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([wildtopics[0]], [MQTTV5.SubscribeOptions(2, retainAsPublished=True)])
   bclient.subscribe([wildtopics[0]], [MQTTV5.SubscribeOptions(2, retainAsPublished=False)])
-  waitfor(callback.messages, 2, 3)
-  waitfor(callback2.messages, 2, 3)
+  waitfor(callback.messages, 2, 5)
+  waitfor(callback2.messages, 2, 5)
 
   assert callback.messages[0][3] == True
   assert callback.messages[1][3] == True
@@ -64,8 +69,8 @@ def test_subscribe_options():
 
   pubclient.publish(topics[1], b"retained true", 1, retained=True)
 
-  waitfor(callback.messages, 1, 3)
-  waitfor(callback2.messages, 1, 3)
+  waitfor(callback.messages, 1, 5)
+  waitfor(callback2.messages, 1, 5)
   assert callback.messages[0][3] == True
   assert callback2.messages[0][3] == False
 
@@ -145,7 +150,7 @@ def test_subscribe_actions():
   assert callback.messages[0][2] == 1
   assert callback.messages[0][3] == False
   callback.clear()
-  
+
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(QoS=2, retainHandling=2)])
   waitfor(callback.messages, 1, 3)
   assert len(callback.messages) == 0
@@ -159,7 +164,7 @@ def test_subscribe_actions():
   waitfor(callback.subscribeds, 1, 3)
   aclient.unsubscribe([topics[0],topics[1],topics[2]])
   aclient.disconnect()
-  assert len(callback.subscribeds) == 1 
+  assert len(callback.subscribeds) == 1
 
   # [MQTT-3.8.4-6] [MQTT-3.8.4-7] [MQTT-3.8.4-8]
   callback.clear()
@@ -175,4 +180,3 @@ def test_subscribe_actions():
   aclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.subscribeds, 1, 3)
   assert callback.subscribeds[0][1][0].value == 2
-  

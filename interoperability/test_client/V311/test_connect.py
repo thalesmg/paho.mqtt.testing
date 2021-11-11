@@ -22,7 +22,7 @@ class TestConnect():
         topic_prefix = "client_test3/"
         self.topics = [topic_prefix + topic for topic in ["TopicA", "TopicA/B", "Topic/C", "TopicA/C", "/TopicA"]]
         self.wildtopics = [topic_prefix + topic for topic in ["TopicA/+", "+/C", "#", "/#", "/+", "+/+", "TopicA/#"]]
-    
+
     def test_basic_behavior(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
@@ -60,25 +60,28 @@ class TestConnect():
         connack = client.connect(host=host, port=port, protocolVersion=6, assertReturnCode=False)
         assert connack.returnCode == 1
 
+    @pytest.mark.rlog_flaky
     def test_clean_session(self):
         callback = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
         # [MQTT-3.1.2-4], [MQTT-3.2.2-3]
-        connack = client.connect(host=host, port=port, cleansession=False)
+        connack = client.connect(host=host, port=port, cleansession=False,
+                                 socket_timeout=0.8)
         assert connack.flags == 0x00
         client.subscribe([self.topics[0]], [2])
         time.sleep(0.5)
         client.pause() # stops responding to incoming publishes
         client.publish(self.topics[0], b"qos 1", 1)
         client.publish(self.topics[0], b"qos 2", 2)
-        time.sleep(.5)
+        time.sleep(0.5)
         client.disconnect()
         assert len(callback.messages) == 0
         callback.clear()
 
         # [MQTT-3.2.2-2]
         client.resume()
-        connack = client.connect(host=host, port=port, cleansession=False)
+        connack = client.connect(host=host, port=port, cleansession=False,
+                                 socket_timeout=0.7)
         assert connack.flags == 0x01
         waitfor(callback.messages, 2, 2)
         assert callback.messages[0][0] == callback.messages[1][0] == 'client_test3/TopicA'
@@ -86,7 +89,8 @@ class TestConnect():
         callback.clear()
 
         # [MQTT-3.1.2-6], [MQTT-3.2.2-1]
-        connack = client.connect(host=host, port=port, cleansession=True)
+        connack = client.connect(host=host, port=port, cleansession=True,
+                                 socket_timeout=0.7)
         assert connack.flags == 0x00
         client.publish(self.topics[0], b"qos 0")
         with pytest.raises(Exception) as e:
@@ -95,18 +99,20 @@ class TestConnect():
         callback.clear()
 
         # [MQTT-3.1.2-7]
-        connack = client.connect(host=host, port=port, cleansession=True)
+        connack = client.connect(host=host, port=port, cleansession=True,
+                                 socket_timeout=0.7)
         assert connack.flags == 0x00
         client.publish(self.topics[0], b"retain message", qos=0, retained=True)
         client.disconnect()
         callback.clear()
 
-        connack = client.connect(host=host, port=port, cleansession=True)
+        connack = client.connect(host=host, port=port, cleansession=True,
+                                 socket_timeout=0.7)
         assert connack.flags == 0x00
         client.subscribe([self.topics[0]], [0])
         waitfor(callback.messages, 1, 2)
         client.publish(self.topics[0], b"", 0, retained=True)
-        time.sleep(.2)
+        time.sleep(0.2)
         client.disconnect()
         callback.clear()
 
@@ -173,17 +179,16 @@ class TestConnect():
         client.disconnect()
 
     # [MQTT-3.1.4-2]
+    @pytest.mark.rlog_flaky
     def test_same_clientid(self):
         callback = Callbacks()
         callback2 = Callbacks()
         client = mqtt_client.Client("myclientid", callback)
         client2 = mqtt_client.Client("myclientid", callback2)
-        
-        client.connect(host=host, port=port, cleansession=True)
+
+        client.connect(host=host, port=port, cleansession=True,
+                       socket_timeout=0.7)
+        time.sleep(0.2)
         client2.connect(host=host, port=port, cleansession=True)
+        time.sleep(0.2)
         assert b'' == client.sock.recv(1)
-
-
-
-
-
