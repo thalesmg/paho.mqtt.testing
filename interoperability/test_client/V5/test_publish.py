@@ -1,6 +1,10 @@
 from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
+# These need to be imported explicitly so that pytest sees it
+from .test_basic import base_socket_timeout, base_sleep, base_wait_for
+
+
 @pytest.fixture(scope="module", autouse=True)
 def __setUp(pytestconfig):
   global host, port
@@ -117,7 +121,9 @@ def test_retain_handling():
   assert len(callback.publisheds) == 1
   aclient.disconnect()
 
-def test_topic():
+@pytest.mark.rlog_flaky
+def test_topic(base_wait_for, base_sleep):
+  callback.clear()
   # [MQTT-3.3.2-1]
   # with pytest.raises(Exception):
   #   aclient.connect(host=host, port=port, cleanstart=True)
@@ -126,16 +132,16 @@ def test_topic():
   # [MQTT-3.3.2-2]
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.publish(wildtopics[0], b"test topic", 1)
-  waitfor(callback.disconnects, 1, 3)
+  waitfor(callback.disconnects, 1, 3 * base_wait_for)
   assert len(callback.disconnects) == 1
   assert callback.disconnects[0]["reasonCode"].value == 144
 
   # [MQTT-3.3.2-3]
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
-  time.sleep(0.1)
+  time.sleep(1 * base_sleep)
   aclient.publish(topics[0], b"test topic", 1)
-  waitfor(callback.messages, 1, 3)
+  waitfor(callback.messages, 1, 3 * base_wait_for)
   aclient.disconnect()
   assert callback.messages[0][0] == topics[0]
 

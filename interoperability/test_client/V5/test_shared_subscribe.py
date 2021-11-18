@@ -1,6 +1,10 @@
 from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, time
 
+# These need to be imported explicitly so that pytest sees it
+from .test_basic import base_socket_timeout, base_sleep, base_wait_for
+
+
 shared_sub_topic = '$share/sharename/' + topic_prefix + 'x'
 shared_pub_topic = topic_prefix + 'x'
 
@@ -198,7 +202,7 @@ def test_client_terminates_when_qos_eq_2():
   assert response.data == b'test_shared_subscriptions_client_terminates_when_qos_eq_2'
 
 @pytest.mark.rlog_flaky
-def test_puback_filed():
+def test_puback_filed(base_socket_timeout, base_sleep, base_wait_for):
   ## If a Client responds with a PUBACK or PUBREC containing a Reason Code of 0x80 or greater to a PUBLISH packet from the Server, the Server MUST discard the Application Message and not attempt to send it to any other Subscriber [MQTT-4.8.2-6].
   callback2.clear()
 
@@ -209,57 +213,57 @@ def test_puback_filed():
   connect.ClientIdentifier = "test_shared_subscriptions"
   connect.CleanStart = True
   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  sock.settimeout(.8)
+  sock.settimeout(8 * base_socket_timeout)
   sock.connect((host, port))
   mqtt_client.main.sendtosocket(sock, connect.pack())
-  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock, socket_timeout=0.8))
+  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock, socket_timeout=8 * base_socket_timeout))
   assert response.fh.PacketType == MQTTV5.PacketTypes.CONNACK
 
   subscribe = MQTTV5.Subscribes()
   subscribe.packetIdentifier = 2
   subscribe.data.append((shared_sub_topic, MQTTV5.SubscribeOptions(2)))
   mqtt_client.main.sendtosocket(sock, subscribe.pack())
-  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock, socket_timeout=0.8))
+  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock, socket_timeout=8 * base_socket_timeout))
   assert response.fh.PacketType == MQTTV5.PacketTypes.SUBACK
-  time.sleep(0.2)
+  time.sleep(2 * base_sleep)
 
   pubclient.publish(shared_pub_topic, b"test_puback_filed", 1)
 
-  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock, socket_timeout=0.8))
+  response = MQTTV5.unpackPacket(MQTTV5.getPacket(sock, socket_timeout=8 * base_socket_timeout))
   assert response.fh.PacketType == MQTTV5.PacketTypes.PUBLISH
   assert response.fh.QoS == 1
 
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([shared_sub_topic], [MQTTV5.SubscribeOptions(2)])
-  time.sleep(0.2)
+  time.sleep(2 * base_sleep)
 
   puback = MQTTV5.Pubacks()
   puback.packetIdentifier = response.packetIdentifier
   puback.reasonCode = MQTTV5.ReasonCodes(packetType=4, aName="Implementation specific error")
   mqtt_client.main.sendtosocket(sock, puback.pack())
 
-  waitfor(callback2.messages, 1, 3)
+  waitfor(callback2.messages, 1, 3 * base_wait_for)
   assert len(callback2.messages) == 0
 
 @pytest.mark.rlog_flaky
-def test_overlapping_subscription():
+def test_overlapping_subscription(base_wait_for):
   ##  A Client is permitted to submit a second SUBSCRIBE request to a Shared Subscription on a Session that's already subscribed to that Shared Subscription. For example, it might do this to change the Requested QoS for its subscription or because it was uncertain that the previous subscribe completed before the previous connection was closed. This does not increase the number of times that the Session is associated with the Shared Subscription, so the Session will leave the Shared Subscription on its first UNSUBSCRIBE.
   aclient.connect(host=host, port=port, cleanstart=True)
   bclient.connect(host=host, port=port, cleanstart=True)
 
   aclient.subscribe([shared_sub_topic], [MQTTV5.SubscribeOptions(2)])
-  waitfor(callback.subscribeds, 1, 5)
+  waitfor(callback.subscribeds, 1, 5 * base_wait_for)
   assert callback.subscribeds[0][1][0].value == 2
 
   callback.clear()
 
   aclient.subscribe([shared_sub_topic], [MQTTV5.SubscribeOptions(1)])
-  waitfor(callback.subscribeds, 1, 5)
+  waitfor(callback.subscribeds, 1, 5 * base_wait_for)
   assert callback.subscribeds[0][1][0].value == 1
 
   bclient.publish(shared_pub_topic, b"test_overlapping_subscription_1", 1)
 
-  waitfor(callback.messages, 1, 5)
+  waitfor(callback.messages, 1, 5 * base_wait_for)
   assert callback.messages[0][1] == b'test_overlapping_subscription_1'
   assert callback.messages[0][2] == 1
 

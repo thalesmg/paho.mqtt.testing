@@ -3,6 +3,18 @@ import pytest
 import mqtt.clients.V5 as mqtt_client, time, logging, socket, sys, getopt, traceback
 import mqtt.formats.MQTTV5 as MQTTV5
 
+@pytest.fixture
+def base_socket_timeout(pytestconfig):
+    return pytestconfig.getoption('base_socket_timeout')
+
+@pytest.fixture
+def base_sleep(pytestconfig):
+    return pytestconfig.getoption('base_sleep')
+
+@pytest.fixture
+def base_wait_for(pytestconfig):
+    return pytestconfig.getoption('base_wait_for')
+
 class Callbacks(mqtt_client.Callback):
 
   def __init__(self):
@@ -82,7 +94,7 @@ def cleanup(host, port):
         time.sleep(.1)
         curclient.disconnect()
         time.sleep(.1)
-    
+
 def cleanRetained(host, port):
   callback = Callbacks()
   curclient = mqtt_client.Client("clean retained".encode("utf-8"))
