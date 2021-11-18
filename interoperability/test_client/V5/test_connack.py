@@ -1,5 +1,9 @@
-from .test_basic import * 
+from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, time
+
+# These need to be imported explicitly so that pytest sees it
+from .test_basic import base_socket_timeout, base_sleep, base_wait_for
+
 
 @pytest.fixture(scope="module", autouse=True)
 def __setUp(pytestconfig):
@@ -7,12 +11,14 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
 
-def test_session_present():
+@pytest.mark.rlog_flaky
+def test_session_present(base_sleep):
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
   connect_properties.SessionExpiryInterval = 5
   # [MQTT-3.2.2-2]
   connack = aclient.connect(host=host, port=port, cleanstart=True, properties=connect_properties)
   assert connack.reasonCode.getName() == "Success" and connack.sessionPresent == False
+  time.sleep(1 * base_sleep)
   # [MQTT-3.2.2-3]
   connack = aclient.connect(host=host, port=port, cleanstart=False)
   assert connack.reasonCode.getName() == "Success" and connack.sessionPresent == True
@@ -77,7 +83,9 @@ def test_assigned_cliend_id():
   assert hasattr(connack.properties, "AssignedClientIdentifier") and connack.properties.AssignedClientIdentifier != ''
   client.disconnect()
 
-def test_maximum_packet_size():
+@pytest.mark.rlog_flaky
+def test_maximum_packet_size(base_wait_for):
+  callback.clear()
   # [MQTT-3.2.2-15]
   # 1. server max packet size
   connack = aclient.connect(host=host, port=port, cleanstart=True)
@@ -85,7 +93,7 @@ def test_maximum_packet_size():
   payload = b"."*int(connack.properties.MaximumPacketSize + 1)
   aclient.publish(topics[0], payload, 0)
   # should get back a disconnect with packet size too big
-  waitfor(callback.disconnects, 1, 3)
+  waitfor(callback.disconnects, 1, 5 * base_wait_for)
   assert len(callback.disconnects) == 1
   assert callback.disconnects[0]["reasonCode"].value == 149
 

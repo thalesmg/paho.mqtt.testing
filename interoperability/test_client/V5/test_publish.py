@@ -1,12 +1,16 @@
-from .test_basic import * 
+from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, time
+
+# These need to be imported explicitly so that pytest sees it
+from .test_basic import base_socket_timeout, base_sleep, base_wait_for
+
 
 @pytest.fixture(scope="module", autouse=True)
 def __setUp(pytestconfig):
   global host, port
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
-  
+
 def test_qos():
   #[MQTT-3.3.1-4]
   aclient.connect(host=host, port=port)
@@ -14,7 +18,7 @@ def test_qos():
   publish = MQTTV5.Publishes()
   publish.fh.QoS = 3
   mqtt_client.main.sendtosocket(aclient.sock, publish.pack())
-  
+
   waitfor(callback.disconnects, 1, 3)
   assert len(callback.disconnects) == 1
   assert callback.disconnects[0]["reasonCode"].value == 130
@@ -42,7 +46,7 @@ def test_retained_message():
   assert callback.messages[0][1] == b"qos 1 retained"
   aclient.unsubscribe([topics[2]])
   waitfor(callback.unsubscribeds, 1, 3)
-  
+
   # [MQTT-3.3.1-5]
   callback.clear()
   aclient.publish(topics[2], b"qos 1 new retained", 1, retained=True)
@@ -54,7 +58,7 @@ def test_retained_message():
   assert callback.messages[0][1] == b"qos 1 new retained"
   aclient.unsubscribe([topics[2]])
   waitfor(callback.unsubscribeds, 1, 3)
-  
+
   # [MQTT-3.3.1-8]
   callback.clear()
   aclient.publish(topics[2], b"qos 1 not retained", 1, retained=False)
@@ -74,7 +78,7 @@ def test_retained_message():
   aclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2)])
   waitfor(callback.subscribeds, 1, 3)
   waitfor(callback.messages, 1, 3)
-  assert len(callback.messages) == 0 
+  assert len(callback.messages) == 0
   aclient.disconnect()
 
 def test_retain_handling():
@@ -82,7 +86,7 @@ def test_retain_handling():
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.publish(topics[2], b"qos 1 retained", 1, retained=True)
   waitfor(callback.publisheds, 1, 3)
-  # [MQTT-3.3.1-9] 
+  # [MQTT-3.3.1-9]
   callback2.clear()
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2,False,False,0)])
@@ -93,7 +97,7 @@ def test_retain_handling():
   assert len(callback2.messages) == 2
   bclient.disconnect()
 
-  # [MQTT-3.3.1-10] 
+  # [MQTT-3.3.1-10]
   callback2.clear()
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([topics[2]], [MQTTV5.SubscribeOptions(2,False,False,1)])
@@ -116,25 +120,28 @@ def test_retain_handling():
   waitfor(callback.publisheds, 1, 3)
   assert len(callback.publisheds) == 1
   aclient.disconnect()
-  
-def test_topic():
+
+@pytest.mark.rlog_flaky
+def test_topic(base_wait_for, base_sleep):
+  callback.clear()
   # [MQTT-3.3.2-1]
   # with pytest.raises(Exception):
   #   aclient.connect(host=host, port=port, cleanstart=True)
   #   aclient.publish("主题名".encode('gbk'), b"test topic", 1)
-  
+
   # [MQTT-3.3.2-2]
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.publish(wildtopics[0], b"test topic", 1)
-  waitfor(callback.disconnects, 1, 3)
+  waitfor(callback.disconnects, 1, 3 * base_wait_for)
   assert len(callback.disconnects) == 1
   assert callback.disconnects[0]["reasonCode"].value == 144
 
   # [MQTT-3.3.2-3]
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+  time.sleep(1 * base_sleep)
   aclient.publish(topics[0], b"test topic", 1)
-  waitfor(callback.messages, 1, 3)
+  waitfor(callback.messages, 1, 3 * base_wait_for)
   aclient.disconnect()
   assert callback.messages[0][0] == topics[0]
 
@@ -144,6 +151,7 @@ def test_payload_format_indicator():
   publish_properties.PayloadFormatIndicator = 56
   aclient.connect(host=host, port=port, cleanstart=True)
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)])
+  time.sleep(0.1)
   aclient.publish(topics[0], b"test_payload_format_indicator", 1, properties=publish_properties)
   waitfor(callback.messages, 1, 3)
   aclient.disconnect()
@@ -175,7 +183,7 @@ def test_message_expiry_interval():
   waitfor(callback2.messages, 4, 3)
   bclient.disconnect()
   aclient.disconnect()
-  # [MQTT-3.3.2-5] 
+  # [MQTT-3.3.2-5]
   assert len(callback2.messages) == 2
   # [MQTT-3.3.2-6]
   assert callback2.messages[0][5].MessageExpiryInterval < 6
@@ -331,7 +339,7 @@ def test_overlapping_subscriptions():
     assert hasattr(m[5], "SubscriptionIdentifier")
     assert m[5].SubscriptionIdentifier == sub_properties.SubscriptionIdentifier
 
-  
+
 def test_subscribe_identifiers():
   aclient.connect(host=host, port=port, cleanstart=True)
   sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
@@ -361,7 +369,7 @@ def test_subscribe_identifiers():
   waitfor(callback2.messages, 2, 5)
   assert len(callback2.messages) == 2
   expected_subsids = set([2, 3])
-  received_subsids = set([callback2.messages[0][5].SubscriptionIdentifier[0], 
+  received_subsids = set([callback2.messages[0][5].SubscriptionIdentifier[0],
                           callback2.messages[1][5].SubscriptionIdentifier[0]])
   assert received_subsids == expected_subsids
   bclient.disconnect()

@@ -1,6 +1,10 @@
 from .test_basic import *
 import mqtt.formats.MQTTV5 as MQTTV5, mqtt.clients.V5 as mqtt_client, pytest,time
 
+# These need to be imported explicitly so that pytest sees it
+from .test_basic import base_socket_timeout, base_sleep, base_wait_for
+
+
 @pytest.fixture(scope="module", autouse=True)
 def __setUp(pytestconfig):
   global host, port
@@ -68,7 +72,8 @@ def test_protocol():
   assert response.fh.PacketType == MQTTV5.PacketTypes.CONNACK
   assert response.reasonCode.value == 130
 
-def test_clean_start():
+@pytest.mark.rlog_flaky
+def test_clean_start(base_sleep):
   # [MQTT-3.1.2-4]
   connect_properties = MQTTV5.Properties(MQTTV5.PacketTypes.CONNECT)
   connect_properties.SessionExpiryInterval = 5
@@ -76,10 +81,12 @@ def test_clean_start():
   assert connack.sessionPresent == False
   # [MQTT-3.1.2-5]
   aclient.terminate()
+  time.sleep(1 * base_sleep)
   connack = aclient.connect(host=host, port=port, cleanstart=False, properties=connect_properties)
   assert connack.sessionPresent == True
   aclient.disconnect
   # [MQTT-3.1.2-6]
+  time.sleep(1 * base_sleep)
   connack = bclient.connect(host=host, port=port, cleanstart=False)
   assert connack.sessionPresent == False
   bclient.disconnect()
@@ -570,4 +577,3 @@ def test_connect_actions():
   new_client.disconnect()
   aclient.disconnect()
   bclient.disconnect()
- 

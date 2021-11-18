@@ -267,9 +267,9 @@ class VBIs:  # Variable Byte Integer
       multiplier *= 128
     return (value, bytes)
 
-def getPacket(aSocket):
+def getPacket(aSocket, socket_timeout=0.3):
   "receive the next packet"
-  aSocket.settimeout(.3)
+  aSocket.settimeout(socket_timeout)
   buf = aSocket.recv(1) # get the first byte fixed header
   if len(buf) == 0:
     return None
@@ -336,7 +336,7 @@ class FixedHeaders(object):
     return {
       "PacketType":Packets.classNames[self.PacketType],
       "DUP": self.DUP,
-      "QoS": self.QoS, 
+      "QoS": self.QoS,
       "RETAIN": self.RETAIN,
       }
 
@@ -819,7 +819,7 @@ class Connects(Packets):
       "ProtocolName": self.ProtocolName,
       "ProtocolVersion": self.ProtocolVersion,
       "CleanStart": self.CleanStart,
-      "WillFlag": self.WillFlag, 
+      "WillFlag": self.WillFlag,
       "KeepAliveTimer": self.KeepAliveTimer,
       "ClientId": self.ClientIdentifier,
       "usernameFlag": self.usernameFlag,
