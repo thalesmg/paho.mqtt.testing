@@ -11,7 +11,8 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
 
-def test_qos():
+def test_qos(base_wait_for):
+  callback.clear()
   #[MQTT-3.3.1-4]
   aclient.connect(host=host, port=port)
 
@@ -19,7 +20,7 @@ def test_qos():
   publish.fh.QoS = 3
   mqtt_client.main.sendtosocket(aclient.sock, publish.pack())
 
-  waitfor(callback.disconnects, 1, 3)
+  waitfor(callback.disconnects, 1, 3 * base_wait_for)
   assert len(callback.disconnects) == 1
   assert callback.disconnects[0]["reasonCode"].value == 130
 
@@ -109,6 +110,7 @@ def test_retain_handling():
   bclient.disconnect()
 
   # [MQTT-3.3.1-11]
+  callback.clear()
   callback2.clear()
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2,False,False,2)])
@@ -340,12 +342,12 @@ def test_overlapping_subscriptions():
     assert m[5].SubscriptionIdentifier == sub_properties.SubscriptionIdentifier
 
 
-def test_subscribe_identifiers():
+def test_subscribe_identifiers(base_wait_for):
   aclient.connect(host=host, port=port, cleanstart=True)
   sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
   sub_properties.SubscriptionIdentifier = 23333
   aclient.subscribe([topics[0]], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
-  waitfor(callback.subscribeds, 1, 3)
+  waitfor(callback.subscribeds, 1, 3 * base_wait_for)
 
   bclient.connect(host=host, port=port, cleanstart=True)
   sub_properties = MQTTV5.Properties(MQTTV5.PacketTypes.SUBSCRIBE)
@@ -356,17 +358,17 @@ def test_subscribe_identifiers():
   sub_properties.SubscriptionIdentifier = 3
   bclient.subscribe([topics[0]+"/#"], [MQTTV5.SubscribeOptions(2)], properties=sub_properties)
 
-  waitfor(callback2.subscribeds, 1, 3)
+  waitfor(callback2.subscribeds, 1, 3 * base_wait_for)
   bclient.publish(topics[0], b"sub identifier test", 1, retained=False)
 
   # [MQTT-3.3.4-4]
-  waitfor(callback.messages, 1, 3)
+  waitfor(callback.messages, 1, 3 * base_wait_for)
   assert len(callback.messages) == 1
   assert callback.messages[0][5].SubscriptionIdentifier[0] == 23333
   aclient.disconnect()
 
   # [MQTT-3.3.4-5]
-  waitfor(callback2.messages, 2, 5)
+  waitfor(callback2.messages, 2, 6 * base_wait_for)
   assert len(callback2.messages) == 2
   expected_subsids = set([2, 3])
   received_subsids = set([callback2.messages[0][5].SubscriptionIdentifier[0],

@@ -3,6 +3,9 @@ import mqtt.formats.MQTTV311 as MQTTV3
 
 from test_client.V311.test_basic import *
 
+# These need to be imported explicitly so that pytest sees it
+from .test_basic import base_socket_timeout, base_sleep, base_wait_for
+
 import pytest
 import functools
 import time
@@ -62,7 +65,7 @@ class TestPublish():
                 break
         assert packet.fh.MessageType == MQTTV3.PUBLISH
         assert packet.fh.DUP == True
-        
+
         client.disconnect()
         client2.disconnect()
 
@@ -108,12 +111,13 @@ class TestPublish():
         client.publish(self.wildtopics[0], b"topic contains wildcard characters", qos = 0)
         assert b'' == client.sock.recv(1)
 
-    def test_actions(self):
+    def test_actions(self, base_socket_timeout, base_wait_for, base_sleep):
         clientid1 = "client-test_actions-1"
         clientid2 = "client-test_actions-2"
         clientid3 = "client-test_actions-3"
         client = mqtt_client.Client(clientid1)
-        client.connect(host=host, port=port, cleansession=True)
+        client.connect(host=host, port=port, cleansession=True,
+                       socket_timeout=9 * base_socket_timeout)
 
         # QoS 0
         client.publish(self.topics[0], b"qos 0", qos = 0)
@@ -145,9 +149,11 @@ class TestPublish():
 
         callback2 = Callbacks()
         client2 = mqtt_client.Client(clientid2, callback2)
-        client2.connect(host=host, port=port, cleansession=True)
+        client2.connect(host=host, port=port, cleansession=True,
+                        socket_timeout=9 * base_socket_timeout)
         client.subscribe([self.topics[0]], [2])
         MQTTV3.getPacket(client.sock)
+        time.sleep(5 * base_sleep)
         client2.publish(self.topics[0], b"qos 2", qos = 2)
         # Server -> Client: PUBLISH
         packet = MQTTV3.unpackPacket(MQTTV3.getPacket(client.sock))
@@ -170,11 +176,8 @@ class TestPublish():
         client.connect(host=host, port=port, cleansession=True)
         client.subscribe([self.wildtopics[0]], [0])
         client.subscribe([self.topics[1]], [2])
-        time.sleep(.5)
+        time.sleep(5 * base_sleep)
         client.publish(self.topics[1], b"test actions", qos = 1)
-        waitfor(callback.messages, 2, 1)
+        waitfor(callback.messages, 2, 1 * base_wait_for)
         assert 0 in [callback.messages[0][2], callback.messages[1][2]]
         assert 1 in [callback.messages[0][2], callback.messages[1][2]]
-
-
-
