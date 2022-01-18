@@ -11,7 +11,8 @@ def __setUp(pytestconfig):
   host = pytestconfig.getoption('host')
   port = int(pytestconfig.getoption('port'))
 
-def test_qos():
+def test_qos(base_wait_for):
+  callback.clear()
   #[MQTT-3.3.1-4]
   aclient.connect(host=host, port=port)
 
@@ -19,7 +20,7 @@ def test_qos():
   publish.fh.QoS = 3
   mqtt_client.main.sendtosocket(aclient.sock, publish.pack())
 
-  waitfor(callback.disconnects, 1, 3)
+  waitfor(callback.disconnects, 1, 3 * base_wait_for)
   assert len(callback.disconnects) == 1
   assert callback.disconnects[0]["reasonCode"].value == 130
 
@@ -109,6 +110,7 @@ def test_retain_handling():
   bclient.disconnect()
 
   # [MQTT-3.3.1-11]
+  callback.clear()
   callback2.clear()
   bclient.connect(host=host, port=port, cleanstart=True)
   bclient.subscribe([wildtopics[5]], [MQTTV5.SubscribeOptions(2,False,False,2)])

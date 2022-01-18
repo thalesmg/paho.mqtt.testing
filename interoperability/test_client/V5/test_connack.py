@@ -84,14 +84,16 @@ def test_assigned_cliend_id():
   client.disconnect()
 
 @pytest.mark.rlog_flaky
-def test_maximum_packet_size(base_wait_for):
+def test_maximum_packet_size(base_wait_for, base_sleep):
   callback.clear()
   # [MQTT-3.2.2-15]
   # 1. server max packet size
   connack = aclient.connect(host=host, port=port, cleanstart=True)
   assert hasattr(connack.properties, "MaximumPacketSize")
   payload = b"."*int(connack.properties.MaximumPacketSize + 1)
+  time.sleep(1 * base_sleep)
   aclient.publish(topics[0], payload, 0)
+  time.sleep(1 * base_sleep)
   # should get back a disconnect with packet size too big
   waitfor(callback.disconnects, 1, 5 * base_wait_for)
   assert len(callback.disconnects) == 1
